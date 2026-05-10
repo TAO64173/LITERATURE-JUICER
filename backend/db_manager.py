@@ -3,11 +3,17 @@ SQLite 卡密管理模块
 自动创建数据库和表结构，提供卡密验证、扣费、查询功能
 """
 
+import logging
 import sqlite3
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 # 数据库文件路径（项目根目录下的 database.db）
 DB_PATH = Path(__file__).parent.parent / "database.db"
+
+# 默认配额（每个卡密）
+DEFAULT_QUOTA = 10
 
 
 def get_connection():
@@ -17,8 +23,35 @@ def get_connection():
     return conn
 
 
+def _seed_beta_codes(conn: sqlite3.Connection) -> int:
+    """从 beta_codes.txt 读取卡密并插入数据库，返回新插入数量"""
+    codes_file = Path(__file__).parent.parent / "beta_codes.txt"
+    if not codes_file.exists():
+        logger.info("beta_codes.txt 不存在，跳过 seed")
+        return 0
+
+    codes = [line.strip() for line in codes_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not codes:
+        logger.info("beta_codes.txt 为空，跳过 seed")
+        return 0
+
+    inserted = 0
+    for code in codes:
+        try:
+            conn.execute(
+                "INSERT OR IGNORE INTO codes_table (code, total_quota, used_quota) VALUES (?, ?, 0)",
+                (code, DEFAULT_QUOTA),
+            )
+            inserted += 1
+        except sqlite3.Error as e:
+            logger.warning(f"插入卡密 {code} 失败: {e}")
+
+    conn.commit()
+    return inserted
+
+
 def init_db():
-    """初始化数据库，创建 codes_table（如不存在）"""
+    """初始化数据库，创建 codes_table（如不存在），并自动 seed 卡密"""
     with get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS codes_table (
@@ -27,7 +60,15 @@ def init_db():
                 used_quota INTEGER NOT NULL DEFAULT 0
             )
         """)
-        conn.commit()
+
+        # 检查表是否为空，为空则自动 seed
+        count = conn.execute("SELECT COUNT(*) FROM codes_table").fetchone()[0]
+        logger.info(f"数据库路径: {DB_PATH}")
+        if count == 0:
+            seeded = _seed_beta_codes(conn)
+            logger.info(f"数据库为空，已自动导入 {seeded} 个卡密")
+        else:
+            logger.info(f"数据库已有 {count} 条卡密记录")
 
 
 def validate_code(code: str) -> bool:

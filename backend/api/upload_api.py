@@ -42,10 +42,10 @@ def _validate_pdf(file_bytes: bytes, filename: str) -> str | None:
 
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
-        if doc.page_count > MAX_PAGES:
-            doc.close()
-            return f"文件 {filename} 超过 30 页限制（当前 {doc.page_count} 页）"
+        page_count = doc.page_count
         doc.close()
+        if page_count > MAX_PAGES:
+            return f"文件 {filename} 超过 30 页限制（当前 {page_count} 页）"
     except Exception:
         return f"文件 {filename} 不是有效的 PDF 文件"
 

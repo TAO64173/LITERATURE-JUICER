@@ -2,10 +2,11 @@
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from backend.db_manager import validate_code, get_remaining_quota, get_next_beta_code
+from backend.db_manager import validate_and_deduct, get_next_beta_code
+from backend.rate_limiter import rate_limit_check, record_failure, record_success
 
 logger = logging.getLogger(__name__)
 
@@ -23,29 +24,32 @@ class CodeResponse(BaseModel):
 
 
 @router.post("/validate-code", response_model=CodeResponse)
-def validate_code_api(req: CodeRequest):
-    """验证卡密有效性，返回剩余额度"""
+def validate_code_api(req: CodeRequest, request: Request):
+    """验证卡密有效性并原子扣减 1 次配额，返回剩余额度"""
     code = req.code.strip()
-    logger.info(f"[validate-code] 收到请求: code='{code}'")
-
-    exists = validate_code(code)
-    logger.info(f"[validate-code] DB 查询 exists={exists}")
-
-    if not exists:
-        logger.info(f"[validate-code] 卡密不存在，返回失败")
+    if not code:
         return CodeResponse(success=False, message="卡密无效或额度不足")
 
-    remaining = get_remaining_quota(code)
-    logger.info(f"[validate-code] remaining={remaining}")
+    # 速率限制检查
+    client_ip = request.client.host if request.client else "unknown"
+    limited, retry_msg = rate_limit_check(client_ip, code)
+    if limited:
+        logger.warning(f"[validate-code] 速率限制触发: ip={client_ip}, code='{code}'")
+        return CodeResponse(success=False, message=retry_msg)
 
-    if remaining <= 0:
-        logger.info(f"[validate-code] 额度不足，返回失败")
-        return CodeResponse(success=False, message="卡密无效或额度不足")
+    logger.info(f"[validate-code] 请求: ip={client_ip}, code='{code}'")
 
-    logger.info(f"[validate-code] 验证成功, remaining={remaining}")
+    success, remaining, message = validate_and_deduct(code)
+    logger.info(f"[validate-code] 结果: success={success}, remaining={remaining}")
+
+    if success:
+        record_success(code)
+    else:
+        record_failure(code)
+
     return CodeResponse(
-        success=True,
-        message="验证成功",
+        success=success,
+        message=message,
         remaining_quota=remaining,
     )
 

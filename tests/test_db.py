@@ -102,3 +102,53 @@ class TestDeductQuota:
         deduct_quota("TEST123", 2)
         deduct_quota("TEST123", 3)
         assert get_remaining_quota("TEST123") == 5
+
+
+class TestValidateAndDeduct:
+    """测试原子验证+扣减"""
+
+    def test_success_returns_remaining(self, test_db, monkeypatch):
+        from backend.db_manager import validate_and_deduct
+
+        monkeypatch.setattr("backend.cache._cache_enabled", False)
+        _insert_code(test_db, "TEST123", 3)
+        success, remaining, msg = validate_and_deduct("TEST123")
+        assert success is True
+        assert remaining == 2
+        assert msg == "验证成功"
+
+    def test_invalid_code(self, test_db, monkeypatch):
+        from backend.db_manager import validate_and_deduct
+
+        monkeypatch.setattr("backend.cache._cache_enabled", False)
+        success, remaining, msg = validate_and_deduct("NOTEXIST")
+        assert success is False
+        assert remaining is None
+        assert msg == "卡密无效或额度不足"
+
+    def test_exhausted_quota(self, test_db, monkeypatch):
+        from backend.db_manager import validate_and_deduct
+
+        monkeypatch.setattr("backend.cache._cache_enabled", False)
+        _insert_code(test_db, "TEST123", 3, used=3)
+        success, remaining, msg = validate_and_deduct("TEST123")
+        assert success is False
+        assert remaining == 0
+
+    def test_sequential_deducts(self, test_db, monkeypatch):
+        from backend.db_manager import validate_and_deduct
+
+        monkeypatch.setattr("backend.cache._cache_enabled", False)
+        _insert_code(test_db, "TEST123", 3)
+
+        s1, r1, _ = validate_and_deduct("TEST123")
+        assert s1 and r1 == 2
+
+        s2, r2, _ = validate_and_deduct("TEST123")
+        assert s2 and r2 == 1
+
+        s3, r3, _ = validate_and_deduct("TEST123")
+        assert s3 and r3 == 0
+
+        s4, r4, _ = validate_and_deduct("TEST123")
+        assert s4 is False and r4 == 0

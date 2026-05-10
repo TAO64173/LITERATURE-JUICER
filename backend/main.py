@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.api.code_api import router as code_router
 from backend.api.upload_api import router as upload_router
 from backend.db_manager import init_db
+from backend.cache import init_cache
 
 # 配置日志，确保 Render 日志中能看到调试信息
 logging.basicConfig(
@@ -25,6 +26,7 @@ frontend = Path(__file__).parent.parent / "frontend"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_cache()
     yield
 
 

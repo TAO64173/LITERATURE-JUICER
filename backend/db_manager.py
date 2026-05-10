@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 DB_PATH = Path(__file__).parent.parent / "database.db"
 
 # 默认配额（每个卡密）
-DEFAULT_QUOTA = 10
+DEFAULT_QUOTA = 3
 
 
 def get_connection():
@@ -82,24 +82,18 @@ def validate_code(code: str) -> bool:
 
 def deduct_quota(code: str, amount: int = 1) -> bool:
     """
-    扣除卡密配额
+    原子扣除卡密配额
+    使用单条 SQL 完成检查+扣减，避免并发竞争
     返回 True 扣费成功，False 余额不足或卡密无效
     """
     with get_connection() as conn:
-        row = conn.execute(
-            "SELECT total_quota, used_quota FROM codes_table WHERE code = ?",
-            (code,),
-        ).fetchone()
-        if row is None:
-            return False
-        if row["total_quota"] - row["used_quota"] < amount:
-            return False
-        conn.execute(
-            "UPDATE codes_table SET used_quota = used_quota + ? WHERE code = ?",
-            (amount, code),
+        cursor = conn.execute(
+            "UPDATE codes_table SET used_quota = used_quota + ? "
+            "WHERE code = ? AND (total_quota - used_quota) >= ?",
+            (amount, code, amount),
         )
         conn.commit()
-        return True
+        return cursor.rowcount > 0
 
 
 def get_remaining_quota(code: str) -> int | None:
@@ -115,6 +109,57 @@ def get_remaining_quota(code: str) -> int | None:
         if row is None:
             return None
         return row["total_quota"] - row["used_quota"]
+
+
+def validate_and_deduct(code: str) -> tuple[bool, int | None, str]:
+    """
+    验证卡密并原子扣减 1 次配额
+    返回 (success, remaining_quota, message)
+    """
+    from backend.cache import get_cached_quota, set_cached_quota, invalidate_code
+
+    # 负缓存：已知无效的卡密直接返回
+    cached = get_cached_quota(code)
+    if cached is not None and cached <= 0:
+        return False, 0, "卡密无效或额度不足"
+
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT total_quota, used_quota FROM codes_table WHERE code = ?",
+            (code,),
+        ).fetchone()
+        if row is None:
+            set_cached_quota(code, -1)  # 缓存无效卡密
+            return False, None, "卡密无效或额度不足"
+
+        remaining = row["total_quota"] - row["used_quota"]
+        if remaining <= 0:
+            set_cached_quota(code, 0)
+            return False, 0, "卡密无效或额度不足"
+
+        # 原子扣减
+        cursor = conn.execute(
+            "UPDATE codes_table SET used_quota = used_quota + 1 "
+            "WHERE code = ? AND (total_quota - used_quota) >= 1",
+            (code,),
+        )
+        if cursor.rowcount == 0:
+            set_cached_quota(code, 0)
+            return False, 0, "卡密无效或额度不足"
+
+        conn.commit()
+        # 扣减后查询最新余额
+        row = conn.execute(
+            "SELECT total_quota, used_quota FROM codes_table WHERE code = ?",
+            (code,),
+        ).fetchone()
+        final_remaining = row["total_quota"] - row["used_quota"]
+
+        # 更新缓存
+        invalidate_code(code)
+        set_cached_quota(code, final_remaining)
+
+        return True, final_remaining, "验证成功"
 
 
 def get_next_beta_code() -> str | None:
@@ -140,7 +185,7 @@ if __name__ == "__main__":
     with get_connection() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO codes_table (code, total_quota, used_quota) VALUES (?, ?, ?)",
-            ("TEST-CODE-001", 10, 0),
+            ("TEST-CODE-001", 3, 0),
         )
         conn.commit()
 
@@ -150,16 +195,23 @@ if __name__ == "__main__":
     print("[OK] 卡密验证通过")
 
     # 测试查询余额
-    assert get_remaining_quota("TEST-CODE-001") == 10
+    assert get_remaining_quota("TEST-CODE-001") == 3
     assert get_remaining_quota("INVALID-CODE") is None
     print("[OK] 余额查询通过")
 
     # 测试扣费
-    assert deduct_quota("TEST-CODE-001", 3) is True
-    assert get_remaining_quota("TEST-CODE-001") == 7
-    assert deduct_quota("TEST-CODE-001", 8) is False  # 余额不足
-    assert get_remaining_quota("TEST-CODE-001") == 7  # 未变化
+    assert deduct_quota("TEST-CODE-001", 1) is True
+    assert get_remaining_quota("TEST-CODE-001") == 2
+    assert deduct_quota("TEST-CODE-001", 3) is False  # 余额不足
+    assert get_remaining_quota("TEST-CODE-001") == 2  # 未变化
     print("[OK] 扣费逻辑通过")
+
+    # 测试 validate_and_deduct
+    success, remaining, msg = validate_and_deduct("TEST-CODE-001")
+    assert success is True
+    assert remaining == 1
+    assert msg == "验证成功"
+    print("[OK] validate_and_deduct 通过")
 
     # 清理测试数据库
     try:

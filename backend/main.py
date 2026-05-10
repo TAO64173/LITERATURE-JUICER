@@ -48,6 +48,11 @@ app.include_router(upload_router)
 app.mount("/static", StaticFiles(directory=frontend / "static"), name="static")
 
 
+@app.get("/health")
+def health():
+    return "ok"
+
+
 @app.get("/")
 def index():
     return FileResponse(frontend / "templates" / "index.html")

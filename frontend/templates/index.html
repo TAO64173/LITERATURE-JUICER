@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Literature Juicer - AI 文献榨汁机</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwindcss.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2563EB',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../static/css/main.css">
+</head>
+<body>
+
+  <!-- ===== 1. Navbar ===== -->
+  <nav class="navbar fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-7xl mx-auto px-8 lg:px-12 h-16 flex items-center justify-between">
+      <!-- Left: Logo + Name -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <span class="text-base font-bold text-gray-900 tracking-tight">Literature Juicer</span>
+      </div>
+
+      <!-- Center: Nav links -->
+      <div class="hidden md:flex items-center gap-7">
+        <a href="#features" class="nav-link">功能介绍</a>
+        <a href="#upload" class="nav-link">使用指南</a>
+        <a href="#pricing" class="nav-link">定价</a>
+        <a href="#faq" class="nav-link">常见问题</a>
+      </div>
+
+      <!-- Right: Theme toggle + CTA -->
+      <div class="flex items-center gap-2.5">
+        <button class="theme-toggle" aria-label="切换主题">
+          <svg class="w-[18px] h-[18px] text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <button class="btn-primary text-[13px] py-2 px-5">使用卡密</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== 2. Hero Section ===== -->
+  <section class="pt-36 pb-28">
+    <div class="max-w-7xl mx-auto px-8 lg:px-12">
+      <div class="hero-grid flex items-center gap-16">
+        <!-- Left content -->
+        <div class="flex-1">
+          <h1 class="hero-title mb-7">
+            告别手动整理，<br>
+            5 分钟生成 10 篇文献的<br>
+            <span class="gradient-text">硬核对比矩阵</span>。
+          </h1>
+          <p class="hero-subtitle mb-10">
+            上传 PDF，AI 自动提取核心变量，<br>
+            生成结构化 Excel 表格，让文献综述不再痛苦。
+          </p>
+
+          <!-- CTA input group -->
+          <div class="cta-group mb-8">
+            <input
+              type="text"
+              placeholder="输入兑换码（卡密）"
+              class="cta-input"
+            >
+            <button class="cta-btn">验证并开始</button>
+          </div>
+
+          <!-- Tags -->
+          <div class="flex flex-wrap gap-3">
+            <span class="tag">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              即用即走
+            </span>
+            <span class="tag">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+              无需注册
+            </span>
+            <span class="tag">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              隐私安全
+            </span>
+            <span class="tag">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              按量扣费
+            </span>
+          </div>
+        </div>
+
+        <!-- Right: Paper stack + glassmorphism illustration -->
+        <div class="flex-1 hidden md:block">
+          <div class="hero-illustration h-[420px] w-full relative">
+            <!-- Gradient orbs -->
+            <div class="orb-1"></div>
+            <div class="orb-2"></div>
+
+            <!-- Paper stack (3 layered documents) -->
+            <div class="paper-stack">
+              <!-- Paper 1 (back) -->
+              <div class="paper paper-1">
+                <div class="paper-content">
+                  <div class="paper-header" style="width:35%"></div>
+                  <div class="paper-rows">
+                    <div class="paper-row"><div class="paper-bar accent" style="width:60%"></div><div class="paper-bar" style="width:30%"></div></div>
+                    <div class="paper-row"><div class="paper-bar" style="width:45%"></div><div class="paper-bar accent" style="width:40%"></div></div>
+                    <div class="paper-row"><div class="paper-bar accent" style="width:50%"></div><div class="paper-bar" style="width:35%"></div></div>
+                    <div class="paper-row"><div class="paper-bar" style="width:55%"></div><div class="paper-bar" style="width:25%"></div></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Paper 2 (middle) -->
+              <div class="paper paper-2">
+                <div class="paper-content">
+                  <div class="paper-header" style="width:45%"></div>
+                  <div class="paper-rows">
+                    <div class="paper-row"><div class="paper-bar" style="width:50%"></div><div class="paper-bar accent" style="width:35%"></div></div>
+                    <div class="paper-row"><div class="paper-bar accent" style="width:40%"></div><div class="paper-bar" style="width:45%"></div></div>
+                    <div class="paper-row"><div class="paper-bar" style="width:55%"></div><div class="paper-bar" style="width:30%"></div></div>
+                    <div class="paper-row"><div class="paper-bar accent" style="width:35%"></div><div class="paper-bar" style="width:50%"></div></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Paper 3 (front) -->
+              <div class="paper paper-3">
+                <div class="paper-content">
+                  <div class="paper-header" style="width:50%"></div>
+                  <div class="paper-rows">
+                    <div class="paper-row"><div class="paper-bar accent" style="width:55%"></div><div class="paper-bar" style="width:30%"></div></div>
+                    <div class="paper-row"><div class="paper-bar" style="width:40%"></div><div class="paper-bar accent" style="width:45%"></div></div>
+                    <div class="paper-row"><div class="paper-bar accent" style="width:50%"></div><div class="paper-bar" style="width:35%"></div></div>
+                    <div class="paper-row"><div class="paper-bar" style="width:60%"></div><div class="paper-bar" style="width:25%"></div></div>
+                    <div class="paper-row"><div class="paper-bar accent" style="width:45%"></div><div class="paper-bar" style="width:40%"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Glass card 1: PDF processed -->
+            <div class="glass-card glass-card-1">
+              <div class="glass-card-icon bg-green-50">
+                <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="glass-card-label">已处理</div>
+              <div class="glass-card-value">10 篇</div>
+              <div class="glass-card-sub">PDF 文献已解析</div>
+            </div>
+
+            <!-- Glass card 2: Mini Excel preview -->
+            <div class="glass-card glass-card-2">
+              <div class="glass-card-icon bg-blue-50">
+                <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <div class="glass-card-label">输出格式</div>
+              <table class="excel-mini">
+                <thead><tr><th>标题</th><th>方法</th><th>指标</th></tr></thead>
+                <tbody>
+                  <tr><td>Attention...</td><td>Transformer</td><td>41.0</td></tr>
+                  <tr><td>BERT</td><td>双向预训练</td><td>80.5%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2.5 Beta Testing ===== -->
+  <section class="py-12">
+    <div class="max-w-3xl mx-auto px-8 lg:px-12">
+      <div class="beta-card card relative overflow-hidden p-8">
+        <!-- Background decoration -->
+        <div class="absolute -top-12 -right-12 w-40 h-40 bg-primary/5 rounded-full blur-2xl"></div>
+        <div class="absolute -bottom-8 -left-8 w-28 h-28 bg-amber-400/10 rounded-full blur-xl"></div>
+
+        <div class="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <!-- Icon -->
+          <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/>
+            </svg>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-900 mb-1">Academic Beta Testing</h3>
+            <p class="text-sm text-gray-500 mb-4">新用户可领取免费测试额度（<span class="font-semibold text-gray-700">3 篇论文</span>），立即体验 AI 文献分析。</p>
+            <div class="flex items-center gap-3">
+              <code id="betaCodeDisplay" class="inline-block bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm font-mono text-gray-800 tracking-wider select-all">加载中...</code>
+              <button id="copyBetaBtn" class="btn-primary text-[13px] py-2 px-5 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                复制卡密
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">将卡密粘贴到上方输入框，验证后即可使用。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. Upload Zone ===== -->
+  <section id="upload" class="py-28">
+    <div class="max-w-4xl mx-auto px-8 lg:px-12">
+      <div class="card p-8">
+        <div class="upload-grid flex gap-8">
+          <!-- Left: Drag area -->
+          <div id="uploadZone" class="upload-zone flex-1 flex flex-col items-center justify-center py-16 px-8 text-center">
+            <div class="upload-zone-icon">
+              <svg class="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            <p class="text-gray-800 font-semibold mb-1.5 text-[15px]">点击或拖拽 PDF 文件到此处上传</p>
+            <p class="text-sm text-gray-400">支持批量上传 · 单个文件 &lt;10MB · 页数 &lt;30 页</p>
+            <input type="file" id="fileInput" accept=".pdf" multiple class="hidden">
+          </div>
+
+          <!-- Right: File grid + actions -->
+          <div class="w-80 flex flex-col gap-4">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">已选择文件</p>
+              <span id="fileCount" class="text-xs text-gray-400">0 个</span>
+            </div>
+
+            <!-- File grid area -->
+            <div id="fileArea" class="overflow-y-auto" style="max-height: 420px; min-height: 80px;">
+              <div id="fileList" class="pdf-grid"></div>
+              <div id="emptyHint" class="flex flex-col items-center justify-center text-gray-300 py-12">
+                <svg class="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                </svg>
+                <p class="text-sm">暂无文件</p>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="border-t border-gray-100 pt-4 space-y-3">
+              <button id="processBtn" class="btn-primary w-full text-[13px] py-2.5 hidden">开始分析</button>
+              <div id="statusArea" class="hidden">
+                <p id="statusText" class="text-sm text-gray-600"></p>
+                <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div id="progressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+              </div>
+              <a id="downloadBtn" class="btn-primary w-full text-[13px] py-2.5 text-center hidden" download>下载 Excel</a>
+              <p class="text-[12px] text-gray-400 text-center">支持 PDF · 单个 &lt;10MB · 最多 20 个</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. Feature Cards ===== -->
+  <section id="features" class="py-28">
+    <div class="max-w-7xl mx-auto px-8 lg:px-12">
+      <div class="feature-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Card 1 -->
+        <div class="card card-hover p-7">
+          <div class="feature-icon bg-blue-50 text-primary mb-5">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2 text-[15px]">精准提取</h3>
+          <p class="text-[13px] text-gray-500 leading-relaxed">提取 5 大核心维度<br>拒绝冗余信息</p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card card-hover p-7">
+          <div class="feature-icon bg-green-50 text-green-600 mb-5">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2 text-[15px]">高效处理</h3>
+          <p class="text-[13px] text-gray-500 leading-relaxed">并发处理 + 智能重试<br>快速完成解析</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card card-hover p-7">
+          <div class="feature-icon bg-purple-50 text-purple-600 mb-5">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2 text-[15px]">结构化输出</h3>
+          <p class="text-[13px] text-gray-500 leading-relaxed">标准 Excel 格式<br>开箱即用</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card card-hover p-7">
+          <div class="feature-icon bg-amber-50 text-amber-600 mb-5">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2 text-[15px]">安全可靠</h3>
+          <p class="text-[13px] text-gray-500 leading-relaxed">文件仅临时处理<br>不保存，无泄露风险</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5. Result Preview ===== -->
+  <section class="py-28">
+    <div class="max-w-7xl mx-auto px-8 lg:px-12">
+      <div class="result-grid flex gap-6">
+        <!-- Left: Completion card -->
+        <div class="completion-card w-72 flex-shrink-0 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-5">
+              <svg class="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-1.5">处理完成</h3>
+            <p class="text-gray-500 text-[13px]">共成功处理 5 篇文献</p>
+          </div>
+          <div class="flex flex-col gap-2.5 mt-8">
+            <button class="btn-primary w-full text-[13px]">下载 Excel 文件</button>
+            <button class="btn-ghost w-full text-[13px]">重新开始</button>
+          </div>
+        </div>
+
+        <!-- Right: Table preview -->
+        <div class="result-table-card">
+          <div class="result-table-wrap">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>论文标题</th>
+                  <th>研究问题</th>
+                  <th>研究方法</th>
+                  <th>性能指标</th>
+                  <th>创新点</th>
+                  <th>局限性</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Attention Is All You Need</td>
+                  <td>序列建模中的长距离依赖问题</td>
+                  <td>Transformer 自注意力机制</td>
+                  <td>BLEU 41.0 (EN-DE)</td>
+                  <td>完全摒弃 RNN/CNN</td>
+                  <td>计算复杂度 O(n²)</td>
+                </tr>
+                <tr>
+                  <td>BERT: Pre-training of Deep Bidirectional Transformers</td>
+                  <td>文本表征的上下文理解不足</td>
+                  <td>双向 Transformer 预训练</td>
+                  <td>GLUE 80.5%</td>
+                  <td>MLM + NSP 预训练策略</td>
+                  <td>模型参数量大，推理慢</td>
+                </tr>
+                <tr>
+                  <td>GPT-4 Technical Report</td>
+                  <td>大语言模型的通用能力边界</td>
+                  <td>大规模预训练 + RLHF</td>
+                  <td>Bar 90th percentile</td>
+                  <td>多模态输入支持</td>
+                  <td>推理成本高，幻觉问题</td>
+                </tr>
+                <tr>
+                  <td>ResNet: Deep Residual Learning</td>
+                  <td>深层网络的退化问题</td>
+                  <td>残差连接 + 恒等映射</td>
+                  <td>ImageNet 3.57% top-5</td>
+                  <td>跳跃连接解决梯度消失</td>
+                  <td>特征冗余，参数效率低</td>
+                </tr>
+                <tr>
+                  <td>YOLOv8: Real-Time Object Detection</td>
+                  <td>实时目标检测的速度-精度权衡</td>
+                  <td>Anchor-free + C2f 模块</td>
+                  <td>COCO 53.9% AP</td>
+                  <td>无锚框设计，部署友好</td>
+                  <td>小目标检测仍有提升空间</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 6. Footer ===== -->
+  <footer class="border-t border-gray-100 py-20">
+    <div class="max-w-7xl mx-auto px-8 lg:px-12 text-center">
+      <!-- Logo repeat -->
+      <div class="flex items-center justify-center gap-2 mb-6">
+        <div class="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <span class="text-sm font-semibold text-gray-900 tracking-tight">Literature Juicer</span>
+      </div>
+      <!-- Feature pills -->
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-8">
+        <span class="text-[13px] text-gray-400">本工具仅供学术研究使用</span>
+        <span class="text-[13px] text-gray-400">不存储文件，保护隐私</span>
+        <span class="text-[13px] text-gray-400">基于 DeepSeek API 驱动</span>
+        <span class="text-[13px] text-gray-400">服务稳定，持续优化</span>
+      </div>
+      <!-- Divider -->
+      <div class="footer-divider mb-6"></div>
+      <!-- Copyright -->
+      <p class="text-xs text-gray-300">&copy; 2024 Literature Juicer. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Toast 通知容器 -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <script src="../static/js/app.js"></script>
+</body>
+</html>

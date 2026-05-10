@@ -1,0 +1,16 @@
+Attention Is All You Need introduces the Transformer architecture.
+
+Research Problem:
+Traditional recurrent neural networks suffer from long-range dependency issues.
+
+Method:
+Transformer with self-attention mechanism.
+
+Metrics:
+BLEU score of 41.0 on English-German translation.
+
+Innovation:
+Removes recurrence entirely and relies on attention.
+
+Limitation:
+Quadratic computational complexity with sequence length.

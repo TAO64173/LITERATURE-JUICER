@@ -4,7 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -48,9 +48,9 @@ app.include_router(upload_router)
 app.mount("/static", StaticFiles(directory=frontend / "static"), name="static")
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
-    return "ok"
+    return Response(content="ok", status_code=200)
 
 
 @app.get("/")

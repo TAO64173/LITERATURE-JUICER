@@ -16,78 +16,181 @@ MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
 # 重试配置
 MAX_RETRIES = 3
-TIMEOUT = 60
+TIMEOUT = 90
 BACKOFF_BASE = 1  # 秒
 
 
-# === Prompt 构建 ===
-SYSTEM_PROMPT = """你是一个顶级科研助手，擅长快速阅读机器学习、人工智能、机器人、自动驾驶、NLP、CV 等领域论文。
+# === 字段定义 ===
+# LLM 提取的字段（title 由文件名生成，不在此列）
+LLM_KEYS = [
+    "author", "year", "journal", "doi", "keywords", "abstract",
+    "question", "background", "gap", "objective",
+    "method", "dataset", "metrics", "comparison",
+    "innovation", "findings", "conclusion",
+    "limitation", "future_work", "inspiration",
+]
 
-你的任务不是简单摘抄，而是像 researcher 一样理解论文并总结核心信息。所有输出必须使用中文。
+# 元数据字段（英文原文保留）
+METADATA_KEYS = {"author", "year", "journal", "doi", "keywords", "abstract"}
 
-【严格阅读与提取顺序】
-你必须按照以下顺序阅读论文并依次提取，前一项未完成不得进入下一项：
-
-第一步：阅读 title + abstract → 提取「研究问题」
-第二步：阅读 introduction + method → 提取「研究方法」
-第三步：阅读 experiments/results → 提取「实验指标」
-第四步：综合全文 → 提取「创新点」
-第五步：仅当前四项都已成功提取后 → 阅读 discussion/conclusion/future work → 提取「局限性」
-
-输出 JSON：
-
-{
-  "question": "",
-  "method": "",
-  "metrics": "",
-  "innovation": "",
-  "limitation": ""
+# 分析类字段（中文输出）
+ANALYSIS_KEYS = {
+    "question", "background", "gap", "objective",
+    "method", "dataset", "metrics", "comparison",
+    "innovation", "findings", "conclusion",
+    "limitation", "future_work", "inspiration",
 }
 
-【字段要求】
+# 用于 limitation 质量检查的核心字段
+CORE_KEYS = ["question", "method", "innovation"]
+
+REQUIRED_KEYS = LLM_KEYS
+
+
+# === Prompt 构建 ===
+SYSTEM_PROMPT = """你是一个顶级科研助手，擅长深度阅读机器学习、人工智能、机器人、自动驾驶、NLP、CV 等领域论文。
+
+你的任务不是简单摘抄，而是像资深 researcher 一样精读论文并提取核心信息。
+
+【输出格式】
+严格输出 JSON object，字段如下：
+
+{
+  "author": "",
+  "year": "",
+  "journal": "",
+  "doi": "",
+  "keywords": "",
+  "abstract": "",
+  "question": "",
+  "background": "",
+  "gap": "",
+  "objective": "",
+  "method": "",
+  "dataset": "",
+  "metrics": "",
+  "comparison": "",
+  "innovation": "",
+  "findings": "",
+  "conclusion": "",
+  "limitation": "",
+  "future_work": "",
+  "inspiration": ""
+}
+
+【字段详细要求】
+
+一、元数据字段（保留英文原文）：
+
+author（作者）：
+- 提取第一作者 + et al.，如 "Vaswani et al."
+- 若为单作者，直接写姓名
+
+year（发表年份）：
+- 仅输出数字，如 "2023"
+
+journal（期刊/会议）：
+- 提取期刊或会议名称，如 "NeurIPS"、"CVPR"、"Nature"
+- 未标注则写 "未明确标注"
+
+doi（DOI）：
+- 提取论文的 DOI 标识符
+- 若无 DOI，输出 "未明确标注"
+
+keywords（关键词）：
+- 提取论文的关键词，用英文逗号分隔
+- 如 "attention mechanism, transformer, self-supervised learning"
+- 若论文无明确关键词，从 abstract 中提炼 3-5 个核心术语
+
+abstract（摘要）：
+- 提取论文的 abstract 摘要内容
+- 保留英文原文
+- 若无明确 abstract，用 1-2 句话概括论文核心内容
+
+二、分析类字段（全部用中文）：
 
 question（研究问题）：
-- 论文解决什么问题
-- 用中文简洁表达，1句话
+- 论文要解决什么具体问题
+- 1-2 句话
+
+background（研究背景）：
+- 研究领域的背景信息
+- 该领域的发展现状
+- 1-2 句话
+
+gap（研究动机/研究空白）：
+- 现有工作存在什么不足或空白
+- 作者为什么要做这项研究
+- 1-2 句话
+
+objective（研究目标）：
+- 作者希望通过这项研究达到什么目标
+- 1-2 句话
 
 method（研究方法）：
-- 核心方法、模型、框架
-- 用中文概括，1~2句话
+- 核心方法、模型架构、技术路线
+- 1-2 句话
 
-metrics（实验指标）：
-- 最重要的实验结果
-- 包含关键指标或数字（如 accuracy、F1、BLEU、提升幅度等）
-- 用中文总结
+dataset（数据集/实验设置）：
+- 使用的数据集名称和规模
+- 实验环境和设置
+- 1-2 句话
+
+metrics（性能指标）：
+- 最重要的实验结果，包含关键数值
+- 如 "在 ImageNet 上达到 88.5% Top-1 准确率，超越 SOTA 2.3 个百分点"
+- 保留数值和指标名称
+
+comparison（对比方法）：
+- 与哪些 baseline 或 SOTA 方法进行了对比
+- 1-2 句话
 
 innovation（创新点）：
-- 相比已有工作的新贡献
-- 用中文总结，1句话
+- 相比已有工作，本文的核心新贡献是什么
+- 1-2 句话
+
+findings（关键发现）：
+- 实验中发现的重要现象或结论
+- 消融实验的关键发现
+- 1-2 句话
+
+conclusion（主要结论）：
+- 作者在论文中得出的核心结论
+- 1-2 句话
 
 limitation（局限性）：
-- 只有前四项都成功提取后才允许填写此项
-- 用中文表达
-- 优先从论文的 limitation、discussion、future work、conclusion 中提取
-- 如果论文未明确说明，则结合论文内容合理总结
-- 如果前四项有任何为空，此项必须为空字符串
-- 长度不少于15个字
+- 优先从论文的 limitation、discussion、future work 章节提取
+- 如果论文未明确说明，基于论文内容合理推断
+- 长度不少于 15 个字
+
+future_work（未来工作）：
+- 作者提出的未来研究方向
+- 如果论文未明确说明，基于论文内容合理推断
+- 1-2 句话
+
+inspiration（可借鉴点/启发）：
+- 这篇论文对其他研究者的启发和可借鉴之处
+- 可复用的方法、思路或技术
+- 1-2 句话
+
+【阅读顺序】
+你必须按以下顺序精读论文：
+1. title + abstract + keywords → 提取元数据 + question + objective
+2. introduction → 提取 background + gap + motivation
+3. method section → 提取 method + innovation
+4. experiments/results → 提取 dataset + metrics + comparison + findings
+5. conclusion/discussion/limitation → 提取 conclusion + limitation + future_work + inspiration
 
 【输出规则】
 1. 仅输出 JSON object
-2. 不输出 markdown
-3. 不输出解释
-4. 不输出 ```json
-5. 所有字段使用中文
-6. 字段缺失时尽量从论文推断，无法推断则返回空字符串
-7. limitation 受前四项约束，前四项不完整时 limitation 必须为空"""
+2. 不输出 markdown、不输出 ```json
+3. 不输出任何解释文字
+4. 元数据字段保留英文原文
+5. 分析类字段全部用中文
+6. 某字段论文中确实不存在时，输出 "未明确提及"
+7. 所有字段不得留空"""
 
-USER_PROMPT_TEMPLATE = """请仔细阅读以下论文内容，按以下优先级顺序提取核心信息（全部用中文）：
-
-提取顺序（必须严格遵守）：
-1. 研究问题（question）—— 论文要解决什么问题？
-2. 研究方法（method）—— 用了什么方法/模型/框架？
-3. 实验指标（metrics）—— 关键实验结果和数据？
-4. 创新点（innovation）—— 相比已有工作有什么新贡献？
-5. 局限性（limitation）—— 仅当前4项都完成后才提取
+USER_PROMPT_TEMPLATE = """请精读以下论文内容，按照系统指令的阅读顺序，依次提取全部 20 个字段。
 
 论文内容：
 {text}
@@ -97,20 +200,33 @@ USER_PROMPT_TEMPLATE = """请仔细阅读以下论文内容，按以下优先级
 FEWSHOT_EXAMPLE = {
     "user": "请提取以下论文信息：Transformer: Attention Is All You Need",
     "assistant": json.dumps({
-        "question": "传统循环神经网络存在长距离依赖问题且无法高效并行化训练。",
-        "method": "提出 Transformer 架构，完全基于自注意力机制，去除循环和卷积结构。",
-        "metrics": "在 WMT14 英德翻译任务上达到 41.0 BLEU，超越此前最佳模型 2 个点以上。",
-        "innovation": "首次完全依赖注意力机制替代循环结构，实现训练阶段的完全并行化。",
-        "limitation": "自注意力机制的计算复杂度与序列长度呈二次关系，处理长序列时计算开销较大。"
+        "author": "Vaswani et al.",
+        "year": "2017",
+        "journal": "NeurIPS",
+        "doi": "10.48550/arXiv.1706.03762",
+        "keywords": "attention mechanism, transformer, self-attention, sequence transduction",
+        "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms.",
+        "question": "传统循环神经网络在处理长序列时存在梯度消失问题，且无法高效并行化训练。",
+        "background": "序列到序列模型主要依赖 RNN 及其变体（LSTM、GRU），在机器翻译等任务中广泛应用，但存在训练效率低下的问题。",
+        "gap": "现有 RNN 及其变体在长距离依赖建模上表现受限，且序列处理的串行特性严重制约训练效率。",
+        "objective": "提出一种完全基于注意力机制的新型序列转导模型，替代循环结构以实现高效并行训练。",
+        "method": "提出 Transformer 架构，完全基于多头自注意力机制和前馈网络，去除循环和卷积结构，引入位置编码。",
+        "dataset": "WMT14 英德翻译数据集（450万句对），WMT14 英法翻译数据集（3600万句对）。",
+        "metrics": "在 WMT14 英德翻译任务上达到 41.0 BLEU，超越此前最佳模型 2 个点以上，训练时间大幅缩短。",
+        "comparison": "与基于 LSTM 的编码器-解码器模型、ConvS2S 模型等当时最先进的序列转导模型进行对比。",
+        "innovation": "首次完全依赖注意力机制替代循环结构，实现训练阶段的完全并行化，并引入多头注意力机制增强表征能力。",
+        "findings": "消融实验表明多头注意力和位置编码对性能至关重要，模型在长距离依赖任务上显著优于 RNN。",
+        "conclusion": "Transformer 架构在机器翻译任务上取得了当时的最佳结果，证明了纯注意力模型的有效性。",
+        "limitation": "自注意力机制的计算复杂度与序列长度呈二次关系，处理超长序列时计算开销较大；模型对位置编码方式敏感。",
+        "future_work": "探索更高效的注意力机制以处理更长序列，将 Transformer 应用于其他任务领域如图像和语音。",
+        "inspiration": "纯注意力架构的设计思路可迁移到各类序列建模任务，多头注意力机制为特征融合提供了新范式。"
     }, ensure_ascii=False)
 }
-
-REQUIRED_KEYS = ["question", "method", "metrics", "innovation", "limitation"]
 
 
 def _build_user_prompt(text: str) -> str:
     """构建用户消息"""
-    return USER_PROMPT_TEMPLATE.format(text=text[:8000])  # 截断避免超长
+    return USER_PROMPT_TEMPLATE.format(text=text[:12000])
 
 
 def _call_api(messages: list[dict]) -> str:
@@ -124,7 +240,7 @@ def _call_api(messages: list[dict]) -> str:
         "model": MODEL,
         "messages": messages,
         "temperature": 0.1,
-        "max_tokens": 1500,
+        "max_tokens": 2500,
     }
 
     last_error: Exception | None = None
@@ -165,25 +281,29 @@ def _parse_response(raw: str) -> dict:
 
     # 填充缺失字段
     for key in REQUIRED_KEYS:
-        data.setdefault(key, "")
+        data.setdefault(key, "未明确提及")
 
     # 强制转为字符串并去除首尾空白
     for key in REQUIRED_KEYS:
         data[key] = str(data[key]).strip()
 
-    # === Safeguard: 前四项任一为空 → limitation 强制清空 ===
-    core_keys = ["question", "method", "metrics", "innovation"]
-    core_missing = [k for k in core_keys if not data[k]]
-    if core_missing:
-        data["limitation"] = ""
-    else:
-        # 前四项完整 → 检查 limitation 质量
-        limitation = data["limitation"]
-        if not limitation or len(limitation) < 15:
-            data["limitation"] = (
-                "论文未明确讨论局限性，潜在问题可能包括："
-                "泛化能力有限、计算开销较大、缺乏真实场景部署验证。"
-            )
+    # 元数据字段：若为空则设为 "未明确提及"
+    for key in METADATA_KEYS:
+        if not data[key]:
+            data[key] = "未明确提及"
+
+    # 分析类字段：若为空则设为 "未明确提及"
+    for key in ANALYSIS_KEYS:
+        if not data[key]:
+            data[key] = "未明确提及"
+
+    # limitation 质量检查：确保长度不少于 15 字
+    limitation = data["limitation"]
+    if limitation == "未明确提及" or len(limitation) < 15:
+        data["limitation"] = (
+            "论文未明确讨论局限性，潜在问题可能包括："
+            "泛化能力有限、计算开销较大、缺乏真实场景部署验证。"
+        )
 
     return {k: data[k] for k in REQUIRED_KEYS}
 
@@ -196,7 +316,7 @@ def extract_paper_info(text: str) -> dict:
         text: 论文全文文本
 
     Returns:
-        包含 question, method, metrics, innovation, limitation 的字典
+        包含全部 14 个 LLM 提取字段的字典
 
     Raises:
         Exception: API 调用失败、超时、JSON 解析失败等

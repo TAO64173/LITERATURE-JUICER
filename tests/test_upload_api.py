@@ -59,11 +59,26 @@ def _find_event(events: list[dict], name: str) -> dict | None:
 
 
 MOCK_LLM_RESULT = {
-    "question": "test question",
-    "method": "test method",
-    "metrics": "test metrics",
-    "innovation": "test innovation",
-    "limitation": "test limitation that is long enough",
+    "author": "Test Author et al.",
+    "year": "2024",
+    "journal": "Test Conference",
+    "doi": "10.1234/test.2024",
+    "keywords": "test, keyword",
+    "abstract": "This is a test abstract for the paper.",
+    "question": "test question about research",
+    "background": "test background information for the study",
+    "gap": "test research gap that needs addressing",
+    "objective": "test objective for the study",
+    "method": "test method for solving the problem",
+    "dataset": "test dataset with 10000 samples",
+    "metrics": "test metrics with numbers",
+    "comparison": "test comparison with baseline methods",
+    "innovation": "test innovation contribution",
+    "findings": "test key findings from experiments",
+    "conclusion": "test conclusion of the paper",
+    "limitation": "test limitation that is long enough to pass validation",
+    "future_work": "test future work direction",
+    "inspiration": "test inspiration for other researchers",
 }
 
 
@@ -85,6 +100,11 @@ class TestUploadPDFs:
         assert "test.pdf" in done.get("files", []) or len(done.get("results", [])) == 1
         assert done["download_url"] is not None
         assert len(done["results"]) == 1
+        # 验证新字段存在
+        result = done["results"][0]
+        assert result["author"] == "Test Author et al."
+        assert result["year"] == "2024"
+        assert result["journal"] == "Test Conference"
 
     def test_non_pdf_rejected(self, tmp_path, monkeypatch):
         monkeypatch.setattr("backend.api.upload_api.UPLOAD_DIR", tmp_path)

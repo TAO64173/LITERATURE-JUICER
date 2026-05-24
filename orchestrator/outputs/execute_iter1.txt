@@ -1,0 +1,1 @@
+ERROR: claude CLI not found. Install Claude Code CLI.

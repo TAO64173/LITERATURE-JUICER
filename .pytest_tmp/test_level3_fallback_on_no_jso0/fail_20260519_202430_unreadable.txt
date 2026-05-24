@@ -1,0 +1,6 @@
+=== 解析失败日志 ===
+时间: 2026-05-19T20:24:30.633365
+文件: unreadable.pdf
+错误: JSON 解析失败：返回内容中未找到 JSON 对象
+--- 原始 LLM 响应 ---
+I cannot parse this paper. Here is my analysis in plain text.

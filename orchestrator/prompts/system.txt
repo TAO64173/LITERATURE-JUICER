@@ -1,0 +1,21 @@
+You are working on Literature Juicer, an AI-powered web app that converts academic PDFs into structured Excel matrix tables.
+
+Project stack:
+- Backend: FastAPI + PyMuPDF + openpyxl + DeepSeek API
+- Frontend: Vanilla JS + Tailwind CDN (no React)
+- Database: SQLite for card code quota system
+- Deployment: Render.com
+
+Key files:
+- backend/main.py — FastAPI entry point
+- backend/core/llm_engine.py — DeepSeek LLM calls with 3-level fallback
+- backend/core/pdf_parser.py — PDF text extraction
+- backend/core/excel_writer.py — Excel generation
+- frontend/templates/index.html — Single-page UI
+- frontend/static/js/app.js — Frontend logic
+
+Design principles:
+- Simplicity first — minimum code that solves the problem
+- Surgical changes — touch only what the task requires
+- Match existing style
+- No speculative abstractions

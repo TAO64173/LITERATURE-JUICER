@@ -1,0 +1,29 @@
+## What the App Does
+
+**Literature Juicer** is a FastAPI web app that:
+
+1. **Takes PDF uploads** — drag-and-drop, multi-file, up to 20 files at 10MB each
+2. **Extracts text** via PyMuPDF (front 3 + back 3 pages, skip references)
+3. **Analyzes with DeepSeek LLM** — extracts 20 fields per paper (author, year, method, innovation, limitations, etc.)
+4. **Exports Excel** — one formatted `.xlsx` file with all papers in a research matrix
+
+It has a card-code (卡密) quota system, SSE progress streaming, and an autonomous orchestrator for AI-driven development.
+
+## Current State
+
+The README.md has an **unresolved merge conflict** — two descriptions are fighting each other. That should be fixed before any deployment.
+
+## Next Steps
+
+Based on what the project needs right now:
+
+**Immediate:**
+1. **Fix the README.md merge conflict** — pick one description and clean up
+2. **Deploy locally** — needs a `DEEPSEEK_API_KEY` in `.env`
+
+**Production:**
+3. **Persistent DB** — Render's ephemeral filesystem loses card codes on restart. Switch to PostgreSQL or add a seed script to the startup
+4. **Add `.gitignore` entries** for uploads/, outputs/, *.db, logs/
+5. **Dockerfile** — would make deployment to Render/Railway seamless
+
+Want me to fix that merge conflict now? It's a 30-second job.

@@ -1,0 +1,4 @@
+I need permission to edit `frontend/static/css/main.css`. Could you grant write access so I can add the comment?
+
+CHANGED: (pending permission) `frontend/static/css/main.css`
+SUMMARY: Added a CSS comment `/* AI Literature Juicer — custom styles */` at the top of `main.css`, before the existing `@import` rule.

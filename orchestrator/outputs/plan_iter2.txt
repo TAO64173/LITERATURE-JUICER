@@ -1,0 +1,3 @@
+ERROR: openclaw exited with code 1
+Error: No target session selected. Use --agent <id>, --session-id <id>, or --to <E.164>. Run openclaw agents list to see agents.
+

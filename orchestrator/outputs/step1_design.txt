@@ -1,0 +1,245 @@
+# Design System Enhancement — Step 1 Analysis
+# Date: 2026-05-16
+# Status: COMPLETE
+
+## 1. Current State Summary
+
+### css/styles.css (New Design System)
+- **Palette**: Teal (#0D9488 primary) + Amber (#F59E0B accent)
+- **Tokens**: 130+ CSS custom properties (colors, spacing, typography, shadows, transitions)
+- **Layout**: CSS Grid sidebar + main-content + value-banner
+- **Components**: .card, .floating, .sidebar-*, .value-banner-*
+- **Utilities**: spacing, shadows, border-radius, typography helpers
+- **Accessibility**: focus-visible, prefers-reduced-motion
+
+### frontend/static/css/main.css (Current)
+- **Palette**: Blue (#2563EB primary) + Purple (#7C3AED gradient accent)
+- **Tokens**: ZERO — all values hardcoded
+- **Layout**: Flexbox-based hero-grid, upload-grid, result-grid
+- **Components**: .navbar, .btn-primary, .btn-ghost, .card, .upload-zone, .pdf-thumb, .result-table, .toast
+- **Animations**: fade-in, glass-float, toast-in/out, status-fade-in
+
+### index.html
+- Already uses .layout-grid, .sidebar, .main-content classes (styles.css structure present in HTML)
+- Tailwind CDN configured with `primary: '#2563EB'` (blue)
+- All JS integration points use class-based selectors
+
+---
+
+## 2. Conflict Analysis
+
+### CRITICAL: Color Palette Mismatch
+
+| Element           | main.css (current)       | styles.css (new)         | Conflict |
+|-------------------|--------------------------|--------------------------|----------|
+| Primary color     | #2563EB (blue)           | #0D9488 (teal)           | HIGH     |
+| Accent color      | #7C3AED (purple)         | #F59E0B (amber)          | HIGH     |
+| Gradient text     | blue→purple              | not defined              | MEDIUM   |
+| Progress bar      | blue→purple gradient     | not defined              | MEDIUM   |
+| Upload zone hover | blue tints               | not defined              | MEDIUM   |
+| Status badges     | blue/green/amber/red     | not defined              | LOW      |
+
+### HIGH: .card Class Collision
+
+Both files define `.card`:
+- main.css: `background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 1px 2px rgba(0,0,0,0.04);`
+- styles.css: `background: var(--bg-surface); border-radius: var(--radius-xl); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm); padding: var(--space-lg);`
+
+The styles.css version adds `padding: var(--space-lg)` which will break existing card layouts that rely on Tailwind padding classes (e.g., `card p-8`, `card p-7`).
+
+### MEDIUM: .card-hover vs .card hover behavior
+
+- main.css `.card-hover:hover`: `transform: translateY(-4px); box-shadow: 0 8px 30px...`
+- styles.css `.card:hover`: `transform: translateY(-2px); box-shadow: var(--shadow-lg);`
+
+Different hover lift distances and shadow intensities.
+
+### MEDIUM: Missing Component Tokens
+
+main.css components have no token equivalents in styles.css:
+- .btn-primary, .btn-ghost (buttons)
+- .upload-zone, .drag-over (upload area)
+- .pdf-thumb, .pdf-thumb-* (file grid)
+- .result-table, .result-table-* (data table)
+- .toast, .toast-* (notifications)
+- .hero-illustration, .glass-card, .paper-stack (hero section)
+- .cta-group, .cta-input, .cta-btn (code input)
+- .tag (pills)
+- .fade-in, .gradient-text (animations)
+- .navbar, .nav-link (navigation)
+- .section-label, .section-title, .section-desc (section headers)
+
+### LOW: Tailwind Config Conflict
+
+index.html line 13: `primary: '#2563EB'` — Tailwind's `bg-primary`, `text-primary` etc. all resolve to blue.
+After integration, this must change to `#0D9488` (teal) or be removed if Tailwind utility usage is replaced by design tokens.
+
+---
+
+## 3. Missing Tokens in styles.css
+
+The following tokens are needed but absent:
+
+### Color Tokens
+- --color-success / --color-success-light (green status)
+- --color-warning / --color-warning-light (amber status)
+- --color-error / --color-error-light (red status)
+- --color-info / --color-info-light (blue status)
+
+### Component-Specific Tokens
+- --btn-primary-bg / --btn-primary-hover / --btn-primary-shadow
+- --btn-ghost-bg / --btn-ghost-border / --btn-ghost-hover
+- --upload-zone-border / --upload-zone-hover-bg / --upload-zone-active-bg
+- --toast-bg / --toast-shadow / --toast-border-radius
+- --navbar-bg / --navbar-blur / --navbar-border
+
+### Spacing/Layout Tokens
+- --navbar-height: 64px (used in layout-grid padding-top)
+- --sidebar-width: 300px (used in grid-template-columns)
+
+---
+
+## 4. Integration Plan — File-by-File
+
+### Phase 1: Token Alignment (css/styles.css)
+
+Changes needed:
+1. ADD missing semantic color tokens (--color-success, --color-warning, --color-error, --color-info)
+2. ADD component tokens for buttons, upload zone, toast, navbar
+3. ADD layout dimension tokens (--navbar-height, --sidebar-width)
+4. FIX .card class: remove default padding (let HTML control padding via Tailwind classes)
+5. ADD .card-hover variant that matches main.css hover behavior or unify
+
+Risk: LOW — additive changes only, no existing behavior broken.
+
+### Phase 2: CSS Merge (frontend/static/css/main.css)
+
+Strategy: main.css becomes the single source of truth. styles.css tokens are imported/merged into main.css.
+
+Changes needed:
+1. MOVE all CSS custom properties from styles.css into main.css `:root` block
+2. REPLACE hardcoded color values in main.css with token references:
+   - #2563EB → var(--color-primary) [which points to teal]
+   - #1D4ED8 → var(--color-primary-dark)
+   - #7C3AED → var(--color-accent) or keep as secondary gradient endpoint
+   - #EFF6FF → var(--color-primary-subtle)
+   - #111827 → var(--text-primary)
+   - #6B7280 → var(--text-secondary)
+   - #94A3B8 → var(--text-muted)
+   - etc.
+3. REPLACE hardcoded spacing values with tokens:
+   - 16px → var(--space-md)
+   - 24px → var(--space-lg)
+   - 32px → var(--space-xl)
+   - etc.
+4. REPLACE hardcoded border-radius with tokens:
+   - 16px → var(--radius-xl)
+   - 12px → var(--radius-lg)
+   - 10px → var(--radius-lg) or --radius-md
+   - etc.
+5. REPLACE hardcoded shadows with tokens
+6. PRESERVE all class names and selectors exactly as-is
+7. PRESERVE all animation keyframes and timing
+
+Risk: MEDIUM — visual appearance will change (blue→teal). Must verify all DOM references still work.
+
+### Phase 3: Tailwind Config Update (index.html)
+
+Change in <script> block:
+- `primary: '#2563EB'` → `primary: '#0D9488'` (teal-600)
+
+Risk: LOW — single config change. All Tailwind utility classes using `primary` will update automatically.
+
+### Phase 4: Layout Grid Integration (main.css)
+
+The HTML already has .layout-grid, .sidebar, .main-content classes. The styles.css layout definitions need to be merged into main.css:
+
+1. ADD .layout-grid grid definition to main.css
+2. ADD .sidebar sticky positioning and styling
+3. ADD .main-content min-width handling
+4. ADD .value-banner gradient and grid
+5. ADD responsive breakpoints for layout-grid
+
+Risk: MEDIUM — layout shift possible. Must verify sidebar/main-content rendering at all breakpoints.
+
+---
+
+## 5. JS Integration Points — Preserved Selectors
+
+All of the following must remain unchanged:
+
+### DOM ID Selectors (app.js references)
+- #fileInput, #uploadZone, #fileCount, #fileList, #emptyHint
+- #processBtn, #statusArea, #statusText, #progressBar, #downloadBtn
+- #betaCodeDisplay, #copyBetaBtn
+- #toastContainer
+
+### Class Selectors (app.js references)
+- .navbar (scroll effect)
+- .cta-btn, .cta-input (code validation)
+- .upload-zone, .drag-over (drag/drop)
+- .pdf-thumb, .pdf-thumb-delete, .pdf-thumb-icon, .pdf-thumb-name, .pdf-thumb-size, .pdf-thumb-status
+- .status-ready, .status-processing, .status-done, .status-error
+- .toast, .toast-error, .toast-warning, .toast-success, .toast-info, .toast-dismiss, .toast-exit
+- .hidden (visibility toggle)
+- .ring-2, .ring-red-400 (Tailwind validation highlight)
+
+### Tailwind Utility Classes (HTML references)
+- bg-primary, text-primary, bg-green-50, text-green-500, etc.
+- All Tailwind classes used in index.html for layout (flex, grid, gap, padding, margin, etc.)
+
+Risk: NONE if class names are preserved. CSS-only changes do not affect JS behavior.
+
+---
+
+## 6. Risk Assessment
+
+| Change                          | Risk   | Impact if Wrong           | Mitigation                  |
+|---------------------------------|--------|---------------------------|-----------------------------|
+| Blue→Teal color swap            | HIGH   | Brand confusion, user shock | Visual QA at each breakpoint |
+| .card padding conflict          | HIGH   | Broken card layouts        | Remove default padding from styles.css |
+| Tailwind primary color update   | MEDIUM | Utility classes wrong color | Grep for all bg-primary/text-primary usage |
+| Layout grid merge               | MEDIUM | Sidebar/main misalignment  | Test at 768px, 1024px, 1440px breakpoints |
+| Token replace in main.css       | MEDIUM | Typo = broken property     | Browser dev tools validation |
+| Missing component tokens        | LOW    | Inconsistent styling       | Add all identified tokens   |
+| Animation timing changes        | LOW    | Jarring transitions        | Keep existing keyframes     |
+
+---
+
+## 7. Recommended Execution Order
+
+1. Add missing tokens to css/styles.css
+2. Merge tokens into main.css :root
+3. Update Tailwind config in index.html
+4. Replace hardcoded values in main.css with token references (one component at a time)
+5. Merge layout grid styles from styles.css into main.css
+6. Visual QA: test all pages at 320px, 768px, 1024px, 1440px
+7. Verify all JS interactions still work (code validation, file upload, drag/drop, toast)
+8. Remove css/styles.css as standalone file (its content is now in main.css)
+
+---
+
+## 8. Summary of Specific Changes Needed
+
+### css/styles.css → merge into main.css
+- All 130+ CSS custom properties
+- .layout-grid, .sidebar, .main-content, .value-banner layout rules
+- Responsive breakpoints for layout grid
+- Accessibility rules (focus-visible, prefers-reduced-motion)
+- Remove .card padding default (conflicts with HTML Tailwind classes)
+
+### frontend/static/css/main.css
+- ADD: :root block with all design tokens
+- REPLACE: 40+ hardcoded color values with token references
+- REPLACE: 20+ hardcoded spacing values with token references
+- REPLACE: 10+ hardcoded border-radius values with token references
+- REPLACE: 5+ hardcoded shadow values with token references
+- ADD: layout grid rules from styles.css
+- PRESERVE: all class names, selectors, animations, keyframes
+
+### frontend/templates/index.html
+- CHANGE: tailwindcss.config primary color from #2563EB to #0D9488
+- PRESERVE: all DOM structure, IDs, classes
+
+### frontend/static/js/app.js
+- NO CHANGES REQUIRED

@@ -12,9 +12,9 @@ database.db
 data.db
 test_database.db
 
-# Uploads & outputs
-uploads/
-outputs/
+# Uploads & outputs (runtime, generated)
+backend/uploads/
+backend/outputs/
 
 # IDE
 .vscode/

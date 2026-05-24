@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python orchestrator/orchestrator.py --help)",
+      "Bash(python -c \"import orchestrator.orchestrator; print\\('Import OK'\\)\")",
+      "Bash(python orchestrator/orchestrator.py --reset --goal \"Test goal\" --supervisor gemini)",
+      "Bash(python orchestrator/orchestrator.py --reset --goal \"Optimize upload loading state in frontend/templates/index.html\" --supervisor openclaw)",
+      "Bash(python -c \"import orchestrator.orchestrator; print\\('OK'\\)\")",
+      "Bash(openclaw agent *)"
+    ]
+  }
+}

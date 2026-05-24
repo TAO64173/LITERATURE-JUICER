@@ -1,0 +1,10 @@
+Task: Verify Changes
+
+Verification checklist:
+1. Run pytest — all tests must pass
+2. Check that all DOM integration points are preserved
+3. Verify responsive layout at breakpoints: 320, 768, 1024, 1440
+4. Verify the upload flow still works with the backend
+5. Check that all animations and transitions are smooth
+
+This file serves as reference. Actual verification runs pytest via subprocess.

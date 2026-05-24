@@ -1,0 +1,6 @@
+=== 解析失败日志 ===
+时间: 2026-05-19T20:24:30.626809
+文件: test.pdf
+错误: parse error
+--- 原始 LLM 响应 ---
+raw response content

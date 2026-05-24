@@ -8,6 +8,7 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.code_api import router as code_router
+from backend.api.invite_api import router as invite_router
 from backend.api.upload_api import router as upload_router
 
 logging.basicConfig(
@@ -37,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(code_router)
+app.include_router(invite_router)
 app.include_router(upload_router)
 
 

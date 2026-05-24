@@ -4,14 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Literature Juicer — a web app that converts uploaded academic PDFs into structured Excel matrix tables. Users enter a card code (卡密) to validate quota, upload PDFs, and the system extracts key research dimensions via DeepSeek LLM, then outputs a formatted Excel file.
+AI Literature Juicer — a web app that converts uploaded academic PDFs into structured Excel matrix tables. Users sign up via Clerk (email+password), get 3 free uploads managed by Supabase, upload PDFs, and the system extracts key research dimensions via DeepSeek LLM, then outputs a formatted Excel file.
 
 ## Commands
 
 ```bash
-# Run the server (hot reload)
+# Backend (FastAPI)
 python -m backend.main
 # → http://127.0.0.1:8000
+
+# Frontend (Next.js)
+cd frontend && npm run dev
+# → http://localhost:3000
 
 # Run all tests
 pytest
@@ -19,50 +23,91 @@ pytest
 # Run a single test file
 pytest tests/test_upload_api.py
 
-# Run a single test
-pytest tests/test_upload_api.py::TestUploadPDFs::test_single_file_upload
+# Build frontend for production
+cd frontend && npm run build
 ```
 
 ## Environment Variables
 
-Required in `.env`:
+**Backend** (`.env`):
 - `DEEPSEEK_API_KEY` — DeepSeek API key for LLM extraction
 - `DEEPSEEK_BASE_URL` — (optional) defaults to `https://api.deepseek.com`
 - `DEEPSEEK_MODEL` — (optional) defaults to `deepseek-chat`
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
+- `CLERK_JWKS_URL` — Clerk JWKS endpoint for JWT verification
+- `CORS_ORIGINS` — comma-separated allowed origins
+
+**Frontend** (`frontend/.env.local`):
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk publishable key
+- `CLERK_SECRET_KEY` — Clerk secret key
+- `NEXT_PUBLIC_API_URL` — FastAPI backend URL (default: `http://localhost:8000`)
 
 ## Architecture
 
 ```
-backend/
-  main.py              — FastAPI app entry, mounts routers + static files
-  db_manager.py        — SQLite card code (卡密) CRUD: validate, deduct, query quota
-  api/
-    code_api.py        — POST /validate-code (card code validation)
-    upload_api.py      — POST /upload (full pipeline), GET /download/{filename}
-  core/
-    pdf_parser.py      — PyMuPDF text extraction (front 3 + back 3 pages, skips references)
-    llm_engine.py      — DeepSeek API call with retry; extracts question/method/metrics/innovation/limitation
-    excel_writer.py    — openpyxl Excel generation with styled headers
+Next.js (Render)  →  FastAPI (Render)  →  Supabase (Postgres)
+       ↓                    ↓
+    Clerk Auth         Clerk JWT verification
+    前端 UI             Supabase 额度管理
 
-frontend/
-  templates/index.html — Single-page UI (Tailwind CDN, no React)
-  static/js/app.js     — Vanilla JS: card code validation, file grid, upload, progress, download
-  static/css/main.css  — Custom styles (navbar, upload zone, PDF grid thumbnails, cards)
+frontend/                  — Next.js frontend
+  app/
+    page.tsx               — Main page: hero, upload, features, footer
+    layout.tsx             — ClerkProvider + ToastContainer
+    sign-in/               — Clerk <SignIn /> page
+    sign-up/               — Clerk <SignUp /> page
+    api/proxy/[...path]/   — Proxies requests to FastAPI with Clerk JWT
+    api/quota/             — GET /api/quota → FastAPI /quota
+  components/
+    Navbar.tsx             — Fixed nav with logo, links, QuotaDisplay, UserButton
+    QuotaDisplay.tsx       — Shows remaining uploads (X / 3)
+    UploadZone.tsx         — Drag-and-drop PDF upload
+    FileGrid.tsx           — PDF thumbnail cards with status
+    ProgressBar.tsx        — Processing progress bar
+    Toast.tsx              — Toast notification system
+  lib/api.ts               — API client: fetchQuota, uploadFiles (SSE stream reader)
+  middleware.ts            — Clerk route protection
+
+backend/                   — FastAPI API server
+  main.py                  — App entry, CORS, mounts routers
+  auth.py                  — Clerk JWT verification (RS256 via JWKS)
+  supabase_client.py       — Supabase: ensure_user_and_quota, get_remaining_quota, deduct_quota
+  api/
+    upload_api.py          — POST /upload (SSE), GET /quota, GET /download/{filename}
+    code_api.py            — POST /validate-code (legacy card code, kept but hidden)
+  core/
+    pdf_parser.py          — PyMuPDF text extraction
+    llm_engine.py          — DeepSeek API with retry
+    excel_writer.py        — openpyxl Excel generation
+  uploads/                 — Uploaded PDFs (runtime, gitignored)
+  outputs/                 — Generated Excel files (runtime, gitignored)
+
+supabase/
+  schema.sql               — users + quotas tables, deduct_quota() function
+
+tests/
+  conftest.py              — Auth + Supabase mock fixtures (autouse)
+  test_upload_api.py       — Upload endpoint tests (11 tests)
+  test_quota.py            — Quota endpoint tests
 ```
 
 ### Request Flow
 
-1. User enters card code → `POST /validate-code` → `db_manager.validate_code()`
-2. User uploads PDFs (drag/click, multi-file, append) → front-end maintains `selectedFiles[]` array
-3. User clicks "开始分析" → `POST /upload` with FormData
-4. Backend per file: `_validate_pdf()` → save to `uploads/` → `pdf_parser.extract_text()` → `llm_engine.extract_paper_info()` → collect results
-5. Backend writes all results to `outputs/literature_matrix.xlsx` via `excel_writer.write_excel()`
-6. Returns `{success, files, results, download_url}` → front-end shows download button
+1. User signs up/in via Clerk → redirected to `/` (protected by middleware)
+2. Frontend calls `GET /api/quota` → proxy → FastAPI `/quota` → Supabase → shows "剩余额度：X / 3"
+3. User uploads PDFs (drag/click) → frontend maintains `FileItem[]` state
+4. User clicks "开始分析" → `POST /api/proxy/upload` (FormData) → proxy attaches Clerk JWT → FastAPI
+5. Backend: `verify_clerk_token` → `ensure_user_and_quota` → check quota → `_validate_pdf` → `extract_text` → `extract_paper_info` → `write_excel` → `deduct_quota`
+6. SSE events streamed back: progress → file_done → warning/error → done (with download_url)
+7. Frontend parses SSE stream, updates progress bar + file status, shows download button
 
 ### Key Design Decisions
 
-- **No React** — vanilla JS + Tailwind CDN. Keep it simple.
-- **No auth** — quota is card-code based (`codes_table` in SQLite).
+- **Next.js + Clerk + Supabase** — commercial-ready auth and quota management.
+- **API proxy** — Next.js `/api/proxy/[...path]` forwards requests to FastAPI with Clerk JWT, avoiding CORS and URL exposure.
+- **SSE streaming** — real-time progress events piped through the proxy via `ReadableStream`.
+- **Card code system** — preserved in backend (`code_api.py`) but hidden from frontend.
 - **Single Excel output** — all papers go into one file, overwritten on each upload.
 - **LLM extraction** — DeepSeek API with 3x exponential backoff retry, 60s timeout, text truncated to 8000 chars.
 - **PDF validation** — max 10MB, max 30 pages, must be valid PDF (PyMuPDF check).
@@ -77,6 +122,7 @@ frontend/
 ## Testing
 
 - Tests use `fastapi.testclient.TestClient` against the real app.
+- `tests/conftest.py` auto-mocks Clerk auth (`verify_clerk_token`) and Supabase functions for all tests.
 - Upload tests mock `extract_paper_info` to avoid real LLM calls.
 - `monkeypatch.setattr("backend.api.upload_api.UPLOAD_DIR", tmp_path)` isolates file I/O.
 - PDF test fixtures are generated with `fitz.open()` (minimal valid PDFs).

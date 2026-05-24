@@ -1,0 +1,26 @@
+=== 解析失败日志 ===
+时间: 2026-05-19T21:00:26.545445
+文件: Fast determination of Cd  II  and Co II  ions in environmental samples after vortex-assisted dispersive solid phase microextraction using ZIF-8.pdf
+错误: JSON 解析失败：返回内容中未找到 JSON 对象
+--- 原始 LLM 响应 ---
+{
+  "author": "Vaezi et al.",
+  "year": "2026",
+  "journal": "Journal of Dispersion Science and Technology",
+  "doi": "10.1080/01932691.2024.2431089",
+  "keywords": "Flame atomic absorption spectroscopy; metal organic frameworks (MOFs); Langmuir; pseudo-second-order model",
+  "abstract": "Zeolite imidazolate framework 8 (ZIF-8), which is a special subgroup of metal-organic frameworks (MOFs), has gained more interest due to its desirable characteristics. ZIF-8 was synthesized at room temperature to prepare an efficient adsorbent. The synthesized ZIF-8 was characterized by X-ray diffraction (XRD), Fourier-transform infrared (FT-IR) spectroscopy, field emission scanning electron microscopy (FESEM), and Brunauer–Emmett–Teller (BET) surface area analysis. This adsorbent was employed for the preconcentration of trace amounts of Cd (II) and Co (II) ions in soil, vegetable juice, and water samples with vortex-assisted dispersive solid phase microextraction (DSPME) before their identification by flame atomic absorption spectroscopy (FAAS). The experimental data were analyzed by the Langmuir, Freundlich, Temkin, and Dubinin Radushkevich (D-R) isotherm models. The monolayer adsorption capacity of ZIF-8 was found to be 238.10 mg g−1 and 90.90 mg g−1 for Cd (II) and Co (II) ions, respectively. The kinetics of the adsorption were tested using pseudo-first-order, pseudo-second-order, and intraparticle diffusion models. The results showed that the adsorption of Cd (II) and Co(II) ions onto ZIF-8 proceeds according to the pseudo-second-order model. Under the optimum conditions, the method showed a good linear dynamic range (2–2000 mg L−1), (0.9–4000mg L−1) with a lower limit of detection (0.6 mg L−1), (0.27 mg L−1) and preconcentration factor (62.5), (33.33) for Co (II) and Cd(II) respectively. The relative standard deviations (RSDs) were less than 1.0% for 0.5 mg L−1. The method is highly selective as there are no significant interferences from matrix cations and anions even at high concentrations. These results reveal the potential use of the synthesized ZIF-8 as an effective adsorbent and used for preconcentration of Cd(II) and Co(II) ions from environmental samples.",
+  "question": "如何利用ZIF-8作为吸附剂，结合涡旋辅助分散固相微萃取和火焰原子吸收光谱法，快速、准确地测定环境样品中的微量Cd(II)和Co(II)离子？",
+  "background": "重金属离子（如Cd和Co）具有高毒性且不可生物降解，需要精确检测；FAAS是常用检测手段，但需预处理步骤以提高灵敏度；现有预处理方法（如LLE、SPE）耗时、使用有机溶剂且效率低。",
+  "gap": "虽然ZIF-8已被用于去除某些污染物，但将其用于预富集和同时测定Cd(II)和Co(II)的研究尚不充分；且现有ZIF-8合成方法往往需要高摩尔比或有机溶剂，不够绿色经济。",
+  "objective": "合成一种低摩尔比、室温水性条件下的ZIF-8，并探究其作为DSPME吸附剂联合FAAS同时测定环境样品中Cd(II)和Co(II)的性能，建立快速、灵敏的分析方法。",
+  "method": "在室温下通过沉淀法，以极低摩尔比（Zn:2-甲基咪唑=1:2）在氨水乙醇溶液中合成ZIF-8，表征后作为吸附剂；采用涡旋辅助分散固相微萃取（DSPME）富集，优化pH、接触时间、洗脱剂等参数，最后用FAAS检测。",
+  "dataset": "土壤、蔬菜汁和水样（环境样品），未明确具体来源或规模。",
+  "metrics": "对于Co(II)：线性范围2–2000 mg L⁻¹，检测限0.6 mg L⁻¹，富集因子62.5；对于Cd(II)：线性范围0.9–4000 mg L⁻¹，检测限0.27 mg L⁻¹，富集因子33.33；RSD<1.0%；吸附容量分别为238.10 mg g⁻¹（Cd）、90.90 mg g⁻¹（Co）。",
+  "comparison": "与文献中其他基于ZIF-8或MOF的吸附方法（如Wang et al.对Cu(II)的去除、Niknam Shahrak et al.对Cr(VI)的去除）在吸附容量、合成条件等方面进行了定性比较。",
+  "innovation": "首次采用极低摩尔比（1:2）在室温水性氨溶液中简便合成ZIF-8，并将其作为DSPME吸附剂结合FAAS同时预富集和测定Cd(II)和Co(II)，方法绿色、经济、快速。",
+  "findings": "吸附动力学符合伪二级模型，等温线符合Langmuir模型；方法选择性好，常见阳离子和阴离子在高浓度下无明显干扰；RSD小于1%，重现性好。",
+  "conclusion": "所合成的ZIF-8是一种高效吸附剂，所建立的DSPME-FAAS方法可快速、灵敏地测定环境样品中的Cd(II)和Co(II)离子。",
+  "limitation": "方法仅测试了实验室加标样品和少数实际样品，对复杂基质（如高盐度废水）的适用性尚未充分验证；检测限（0.27–0.6 mg L⁻¹）对于超痕量分析可能不够低。",
+  "future_work": "可进一步探索ZIF-8对其他重金属离子（如Pb、Hg）的预富集能力，或将该方法扩展到更多实际环境样品的长期监测中。",
+  "inspiration": "利用MOF材料（特别是ZIF-8）结合涡旋辅助分散固相微萃取，实现了快速、低成本的样品前处理，该思路可推广至其他金属离子的检测，且合成方法绿色可规模化。"

@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+/* ===== Animations ===== */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* ===== Base ===== */
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Hero gradient text ===== */
+.gradient-text {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Paper stack illustration ===== */
+.paper-stack {
+  position: absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 200px;
+  height: 260px;
+}
+
+.paper {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+}
+
+.paper-1 { transform: rotate(-6deg); z-index: 1; }
+.paper-2 { transform: rotate(-2deg); z-index: 2; }
+.paper-3 { transform: rotate(3deg); z-index: 3; }
+
+.paper-header {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.paper-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paper-row {
+  display: flex;
+  gap: 6px;
+}
+
+.paper-bar {
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.paper-bar.accent {
+  background: #dbeafe;
+}
+
+/* ===== Glass cards ===== */
+.glass-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+}
+
+.glass-card-1 {
+  top: 15%;
+  left: 5%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.glass-card-2 {
+  bottom: 15%;
+  right: 0;
+  animation: float 6s ease-in-out infinite 2s;
+}
+
+.glass-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.glass-card-label {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.glass-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.glass-card-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ===== Excel mini table ===== */
+.excel-mini {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-top: 6px;
+}
+
+.excel-mini th {
+  background: #f9fafb;
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.excel-mini td {
+  padding: 4px 8px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ===== Result table ===== */
+.result-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.result-table th {
+  background: #f9fafb;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.result-table td {
+  padding: 10px 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.result-table tr:hover td {
+  background: #f9fafb;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .paper-stack {
+    display: none;
+  }
+
+  .glass-card {
+    display: none;
+  }
+}

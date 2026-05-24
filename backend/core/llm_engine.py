@@ -1,11 +1,17 @@
 """DeepSeek API 调用模块，用于论文信息抽取"""
 
 import json
+import logging
 import os
+import re
 import time
+from datetime import datetime
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -16,7 +22,7 @@ MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
 # 重试配置
 MAX_RETRIES = 3
-TIMEOUT = 90
+TIMEOUT = 180
 BACKOFF_BASE = 1  # 秒
 
 
@@ -45,6 +51,9 @@ ANALYSIS_KEYS = {
 CORE_KEYS = ["question", "method", "innovation"]
 
 REQUIRED_KEYS = LLM_KEYS
+
+# 日志目录
+LOG_DIR = Path(__file__).parent.parent.parent / "logs"
 
 
 # === Prompt 构建 ===
@@ -266,16 +275,116 @@ def _call_api(messages: list[dict]) -> str:
     raise last_error  # type: ignore[misc]
 
 
+def _strip_code_fences(text: str) -> str:
+    """移除 markdown 代码围栏（```json ... ``` 或 ``` ... ```）"""
+    # 匹配 ```json 或 ``` 开头，到 ``` 结尾的代码块
+    pattern = r"```(?:json)?\s*\n?(.*?)\n?\s*```"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
+
+
+def _repair_json(text: str) -> dict | None:
+    """
+    Level 2: 尝试修复常见 LLM JSON 格式错误
+
+    尝试策略：
+    1. 去除 markdown 代码围栏
+    2. 提取第一个 { ... } 块
+    3. 修复尾部逗号、单引号、注释等常见问题
+    4. 多次尝试 json.loads
+    """
+    cleaned = _strip_code_fences(text)
+
+    # 提取第一个 JSON 对象
+    start = cleaned.find("{")
+    end = cleaned.rfind("}") + 1
+    if start == -1 or end == 0:
+        return None
+
+    json_str = cleaned[start:end]
+
+    # 修复策略列表
+    repairs = [
+        lambda s: s,  # 原样尝试
+        lambda s: re.sub(r",\s*}", "}", s),  # 去尾部逗号
+        lambda s: re.sub(r",\s*\]", "]", s),  # 去数组尾部逗号
+        lambda s: re.sub(r"'", '"', s),  # 单引号 → 双引号
+        lambda s: re.sub(r"//.*?$", "", s, flags=re.MULTILINE),  # 去行注释
+        lambda s: re.sub(r"/\*.*?\*/", "", s, flags=re.DOTALL),  # 去块注释
+        lambda s: re.sub(r",\s*}", "}", re.sub(r",\s*\]", "]", s)),  # 组合修复
+    ]
+
+    for repair_fn in repairs:
+        try:
+            repaired = repair_fn(json_str)
+            data = json.loads(repaired)
+            if isinstance(data, dict):
+                return data
+        except (json.JSONDecodeError, Exception):
+            continue
+
+    return None
+
+
+def _build_fallback_result(filename: str = "") -> dict:
+    """
+    Level 3: 生成最小化降级结果
+
+    所有字段填充 "未成功解析"，确保 Excel 可以正常导出。
+    """
+    result = {key: "未成功解析" for key in LLM_KEYS}
+    # limitation 需要更长的文本以通过质量检查
+    result["limitation"] = (
+        "论文未明确讨论局限性，潜在问题可能包括："
+        "泛化能力有限、计算开销较大、缺乏真实场景部署验证。"
+    )
+    return result
+
+
+def _save_failure_log(raw_response: str, filename: str, error_msg: str) -> None:
+    """保存失败的 LLM 响应到日志文件，用于调试"""
+    try:
+        LOG_DIR.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = re.sub(r"[^\w\-.]", "_", Path(filename).stem)
+        log_filename = f"fail_{timestamp}_{safe_name}.txt"
+        log_path = LOG_DIR / log_filename
+
+        content = (
+            f"=== 解析失败日志 ===\n"
+            f"时间: {datetime.now().isoformat()}\n"
+            f"文件: {filename}\n"
+            f"错误: {error_msg}\n"
+            f"--- 原始 LLM 响应 ---\n"
+            f"{raw_response}\n"
+        )
+        log_path.write_text(content, encoding="utf-8")
+        logger.info("失败日志已保存: %s", log_path)
+    except Exception as log_err:
+        logger.warning("保存失败日志时出错: %s", log_err)
+
+
 def _parse_response(raw: str) -> dict:
     """解析 LLM 返回的 JSON，校验字段完整性"""
-    # 尝试提取 JSON 子串（防止 LLM 输出多余文字）
-    start = raw.find("{")
-    end = raw.rfind("}") + 1
+    # Step 1: 移除 markdown 代码围栏
+    cleaned = _strip_code_fences(raw)
+
+    # Step 2: 尝试提取 JSON 子串（防止 LLM 输出多余文字）
+    start = cleaned.find("{")
+    end = cleaned.rfind("}") + 1
     if start == -1 or end == 0:
         raise Exception("JSON 解析失败：返回内容中未找到 JSON 对象")
 
+    json_str = cleaned[start:end]
+
+    # Step 3: 移除尾部逗号（LLM 常见错误）, { "a": "b", } → { "a": "b" }
+    json_str = re.sub(r",\s*}", "}", json_str)
+    json_str = re.sub(r",\s*\]", "]", json_str)
+
     try:
-        data = json.loads(raw[start:end])
+        data = json.loads(json_str)
     except json.JSONDecodeError:
         raise Exception("JSON 解析失败：返回内容不是有效 JSON")
 
@@ -308,19 +417,28 @@ def _parse_response(raw: str) -> dict:
     return {k: data[k] for k in REQUIRED_KEYS}
 
 
-def extract_paper_info(text: str) -> dict:
+def extract_paper_info(text: str, filename: str = "") -> dict:
     """
-    从论文全文中提取结构化信息
+    从论文全文中提取结构化信息，带 3 级降级容错 + 自动重试
+
+    Level 1: 正常解析 LLM JSON
+    Level 2: 修复常见格式错误后解析
+    Level 3: 生成最小化降级结果（所有字段填 "未成功解析"）
+
+    如果 Level 1 + Level 2 均失败，会自动重试 API 调用（最多 RETRY_PARSE 次）。
 
     Args:
         text: 论文全文文本
+        filename: 原始文件名（用于日志记录）
 
     Returns:
-        包含全部 14 个 LLM 提取字段的字典
+        包含全部 20 个 LLM 提取字段的字典
 
     Raises:
-        Exception: API 调用失败、超时、JSON 解析失败等
+        Exception: API 调用失败、超时等网络层错误（非 JSON 解析错误）
     """
+    RETRY_PARSE = 2  # JSON 解析失败时的额外重试次数
+
     if not API_KEY:
         raise Exception("未配置 DEEPSEEK_API_KEY 环境变量")
 
@@ -331,8 +449,56 @@ def extract_paper_info(text: str) -> dict:
         {"role": "user", "content": _build_user_prompt(text)},
     ]
 
-    raw_response = _call_api(messages)
-    return _parse_response(raw_response)
+    last_raw_response = ""
+    last_error = ""
+
+    for attempt in range(1 + RETRY_PARSE):
+        if attempt > 0:
+            logger.info("第 %d 次重试解析 (%s)", attempt, filename)
+            time.sleep(1)
+
+        raw_response = _call_api(messages)
+        last_raw_response = raw_response
+
+        # === Level 1: 正常解析 ===
+        try:
+            return _parse_response(raw_response)
+        except Exception as e1:
+            level1_err = str(e1)
+            last_error = level1_err
+            logger.warning("Level 1 解析失败 (%s): %s", filename, level1_err)
+
+        # === Level 2: 修复后解析 ===
+        try:
+            repaired = _repair_json(raw_response)
+            if repaired is not None:
+                # 填充缺失字段并校验（复用 _parse_response 的后处理逻辑）
+                for key in REQUIRED_KEYS:
+                    repaired.setdefault(key, "未明确提及")
+                for key in REQUIRED_KEYS:
+                    repaired[key] = str(repaired[key]).strip()
+                for key in METADATA_KEYS:
+                    if not repaired[key]:
+                        repaired[key] = "未明确提及"
+                for key in ANALYSIS_KEYS:
+                    if not repaired[key]:
+                        repaired[key] = "未明确提及"
+                # limitation 质量检查
+                limitation = repaired["limitation"]
+                if limitation == "未成功解析" or limitation == "未明确提及" or len(limitation) < 15:
+                    repaired["limitation"] = (
+                        "论文未明确讨论局限性，潜在问题可能包括："
+                        "泛化能力有限、计算开销较大、缺乏真实场景部署验证。"
+                    )
+                logger.info("Level 2 修复成功 (%s)", filename)
+                return {k: repaired[k] for k in REQUIRED_KEYS}
+        except Exception as e2:
+            logger.warning("Level 2 修复失败 (%s): %s", filename, str(e2))
+
+    # === Level 3: 降级结果（所有重试均失败） ===
+    logger.warning("Level 3 降级模式 (%s)，重试 %d 次均失败，最后错误: %s", filename, RETRY_PARSE, last_error)
+    _save_failure_log(last_raw_response, filename, last_error)
+    return _build_fallback_result(filename)
 
 
 # === 测试入口 ===

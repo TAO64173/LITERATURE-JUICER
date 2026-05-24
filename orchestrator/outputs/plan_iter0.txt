@@ -1,0 +1,15 @@
+**All 93 tests pass.** ✅
+
+Done — **Path traversal protection** added to the download endpoint:
+
+**What changed in `backend/api/upload_api.py`:**
+- Added `os.path.basename()` sanitization on the filename
+- Rejects any request with `/` or `\` in the filename (returns 400)
+- `filename:path` route param captures the full path segment (instead of defaulting to a single segment, which FastAPI already auto-splits on `/` — this ensures we catch and reject it explicitly)
+
+**Before:** `/download/../../etc/passwd` → would resolve to an unintended path  
+**After:** `/download/../../etc/passwd` → returns **400 非法的文件名**
+
+**All 93 tests pass** including the existing download test (`test_download_nonexistent`).
+
+Want me to tackle another issue from the review? #2 (stale `data.db`), #6 (static file paths), or #7 (extension check before reading files) are all quick wins.

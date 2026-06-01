@@ -592,79 +592,70 @@ def apply_invite_code(clerk_user_id: str, email: str, invite_code: str) -> dict:
         return {"success": False, "message": "邀请码使用失败，请稍后重试"}
 
 
-# ─── Redeem Code System ─────────────────────────────────────────
+# ─── Order Management (Mapay EPay) ───────────────────────────────
 
-def redeem_code(clerk_user_id: str, email: str, code: str) -> dict:
-    """Redeem a prepaid code. Adds quota to user. Returns result dict."""
-    if not code:
-        return {"success": False, "message": "请输入兑换码"}
-
+def get_user_id_by_clerk_id(clerk_user_id: str) -> str | None:
+    """Look up internal user UUID by Clerk user ID."""
     sb = get_supabase()
     if sb is None:
-        return {"success": False, "message": "服务暂时不可用"}
+        return None
+    try:
+        resp = sb.table("users").select("id").eq("clerk_user_id", clerk_user_id).execute()
+        if resp.data:
+            return resp.data[0]["id"]
+        return None
+    except Exception as e:
+        logger.warning("[order] get_user_id_by_clerk_id failed: %s", e)
+        return None
 
-    from datetime import datetime, timezone
 
-    for attempt in range(3):
-        try:
-            logger.info("[redeem] Attempt %d: code=%s user=%s", attempt + 1, code, clerk_user_id)
+def create_order(user_id: str, amount: float, credits: int, order_id: str) -> dict | None:
+    """Insert a new order row with status='pending'. Returns the order dict or None."""
+    sb = get_supabase()
+    if sb is None:
+        return None
+    try:
+        resp = sb.table("orders").insert({
+            "id": order_id,
+            "user_id": user_id,
+            "amount": amount,
+            "credits": credits,
+            "status": "pending",
+        }).execute()
+        if resp.data:
+            return resp.data[0]
+        return None
+    except Exception as e:
+        logger.error("[order] create_order failed: %s", e, exc_info=True)
+        return None
 
-            # Find the redeem code
-            code_resp = (
-                sb.table("redeem_codes")
-                .select("id, code, quota_amount, status, expires_at")
-                .eq("code", code.strip().upper())
-                .execute()
-            )
-            logger.info("[redeem] Query result: %s", code_resp.data)
-            if not code_resp.data:
-                return {"success": False, "message": "兑换码不存在"}
-            redeem = code_resp.data[0]
 
-            if redeem["status"] == "used":
-                return {"success": False, "message": "该兑换码已被使用"}
+def get_order(order_id: str) -> dict | None:
+    """Fetch an order by ID."""
+    sb = get_supabase()
+    if sb is None:
+        return None
+    try:
+        resp = sb.table("orders").select("*").eq("id", order_id).execute()
+        if resp.data:
+            return resp.data[0]
+        return None
+    except Exception as e:
+        logger.warning("[order] get_order failed: %s", e)
+        return None
 
-            if redeem.get("expires_at"):
-                expires = datetime.fromisoformat(redeem["expires_at"].replace("Z", "+00:00"))
-                if datetime.now(timezone.utc) > expires:
-                    return {"success": False, "message": "该兑换码已过期"}
 
-            # Find user
-            user_resp = (
-                sb.table("users")
-                .select("id")
-                .eq("clerk_user_id", clerk_user_id)
-                .execute()
-            )
-            if not user_resp.data:
-                return {"success": False, "message": "用户不存在"}
-            user_id = user_resp.data[0]["id"]
-
-            # Add quota
-            result = sb.rpc("add_quota", {"p_user_id": user_id, "p_amount": redeem["quota_amount"]}).execute()
-            if result.data is None or result.data < 0:
-                return {"success": False, "message": "额度增加失败"}
-
-            # Mark code as used
-            now_iso = datetime.now(timezone.utc).isoformat()
-            sb.table("redeem_codes").update({
-                "status": "used",
-                "used_by": user_id,
-                "used_at": now_iso,
-            }).eq("id", redeem["id"]).execute()
-
-            logger.info("[redeem] User %s redeemed code %s for %d quota, remaining=%s", clerk_user_id, code, redeem["quota_amount"], result.data)
-            return {
-                "success": True,
-                "message": f"兑换成功！已增加 {redeem['quota_amount']} 篇额度",
-                "added_quota": redeem["quota_amount"],
-                "remaining_quota": result.data,
-            }
-        except Exception as e:
-            logger.warning("[redeem] Attempt %d failed: %s", attempt + 1, e)
-            if attempt == 2:
-                logger.error("[redeem] All 3 attempts failed for code=%s user=%s", code, clerk_user_id, exc_info=True)
-                return {"success": False, "message": "兑换失败，请稍后重试"}
-            time.sleep(0.5 * (attempt + 1))
-
-    return {"success": False, "message": "兑换失败，请稍后重试"}
+def update_order_status(order_id: str, status: str, provider_order_id: str | None = None) -> bool:
+    """Update order status (and optionally provider_order_id). Returns True on success."""
+    sb = get_supabase()
+    if sb is None:
+        return False
+    try:
+        update: dict = {"status": status}
+        if provider_order_id is not None:
+            update["provider_order_id"] = provider_order_id
+        sb.table("orders").update(update).eq("id", order_id).execute()
+        return True
+    except Exception as e:
+        logger.warning("[order] update_order_status failed: %s", e)
+        return False

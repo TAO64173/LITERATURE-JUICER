@@ -63,6 +63,19 @@ create table if not exists public.redeem_codes (
   expires_at timestamptz
 );
 
+-- Orders table: tracks payment orders (Mapay EPay)
+create table if not exists public.orders (
+  id text primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  amount numeric(10,2) not null,
+  credits integer not null,
+  status text not null default 'pending',
+  provider text not null default 'mapay',
+  provider_order_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Indexes
 create index if not exists idx_users_clerk_user_id on public.users(clerk_user_id);
 create index if not exists idx_quotas_user_id on public.quotas(user_id);
@@ -71,6 +84,8 @@ create index if not exists idx_analysis_history_user_id on public.analysis_histo
 create index if not exists idx_invite_records_inviter on public.invite_records(inviter_user_id);
 create index if not exists idx_invite_records_invited on public.invite_records(invited_user_id);
 create index if not exists idx_redeem_codes_code on public.redeem_codes(code);
+create index if not exists idx_orders_user_id on public.orders(user_id, status);
+create index if not exists idx_orders_provider_order_id on public.orders(provider_order_id);
 
 -- Row Level Security (backend uses service role key, bypasses RLS)
 alter table public.users enable row level security;
@@ -79,6 +94,7 @@ alter table public.usage_history enable row level security;
 alter table public.analysis_history enable row level security;
 alter table public.invite_records enable row level security;
 alter table public.redeem_codes enable row level security;
+alter table public.orders enable row level security;
 
 -- Schema-level permissions (REQUIRED for PostgREST access)
 grant usage on schema public to service_role;
@@ -91,6 +107,7 @@ grant select, insert, update, delete on public.usage_history to service_role;
 grant select, insert, update, delete on public.analysis_history to service_role;
 grant select, insert, update, delete on public.invite_records to service_role;
 grant select, insert, update, delete on public.redeem_codes to service_role;
+grant select, insert, update, delete on public.orders to service_role;
 
 -- Grant to anon for any public reads if needed
 grant select on public.users to anon;

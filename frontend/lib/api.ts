@@ -126,4 +126,35 @@ export async function applyInviteCode(code: string): Promise<{ success: boolean;
   return res.json();
 }
 
+export interface PaymentOrder {
+  success: boolean;
+  payUrl: string;
+  orderId: string;
+  message?: string;
+}
 
+export interface PaymentStatus {
+  success: boolean;
+  paid: boolean;
+  credits: number;
+}
+
+export async function createOrder(amount: number): Promise<PaymentOrder> {
+  const res = await fetch("/api/proxy/payment/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) {
+    throw new Error("创建订单失败");
+  }
+  return res.json();
+}
+
+export async function checkPaymentStatus(orderId: string): Promise<PaymentStatus> {
+  const res = await fetch(`/api/proxy/payment/status/${orderId}`, { method: "GET" });
+  if (!res.ok) {
+    throw new Error("查询支付状态失败");
+  }
+  return res.json();
+}

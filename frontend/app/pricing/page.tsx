@@ -4,11 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { InviteSection } from "@/components/InviteSection";
+import { showToast } from "@/components/Toast";
+import { createOrder } from "@/lib/api";
 
 const plans = [
   {
     name: "免费版",
     price: "¥0",
+    amount: 0,
     period: "",
     features: ["注册即送 3 篇解析额度", "PDF 智能解析", "AI 变量提取", "Excel 结构化输出"],
     button: "立即开始",
@@ -18,26 +21,45 @@ const plans = [
   {
     name: "基础包",
     price: "¥8.8",
+    amount: 8.8,
     period: "",
     features: ["10 篇解析额度", "PDF 智能解析", "AI 变量提取", "Excel 结构化输出", "批量处理"],
     button: "立即购买",
-    href: "#",
+    href: null,
     highlight: false,
   },
   {
     name: "专业包",
     price: "¥15",
+    amount: 15,
     period: "",
     badge: "推荐",
     features: ["20 篇解析额度", "PDF 智能解析", "AI 变量提取", "Excel 结构化输出", "批量处理", "优先处理队列"],
     button: "立即购买",
-    href: "#",
+    href: null,
     highlight: true,
   },
 ];
 
 export default function PricingPage() {
   const [quotaRefreshKey, setQuotaRefreshKey] = useState(0);
+  const [loading, setLoading] = useState<number | null>(null);
+
+  const handleBuy = async (amount: number) => {
+    setLoading(amount);
+    try {
+      const data = await createOrder(amount);
+      if (data.success && data.payUrl) {
+        window.location.href = data.payUrl;
+      } else {
+        showToast(data.message || "创建订单失败", "error");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "网络错误，请稍后重试", "error");
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col pt-28 pb-20">
@@ -90,16 +112,30 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href={plan.href}
-                className={`mt-6 block rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-all ${
-                  plan.highlight
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                {plan.button}
-              </Link>
+              {plan.href ? (
+                <Link
+                  href={plan.href}
+                  className={`mt-6 block rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-all ${
+                    plan.highlight
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {plan.button}
+                </Link>
+              ) : (
+                <button
+                  onClick={() => handleBuy(plan.amount)}
+                  disabled={loading === plan.amount}
+                  className={`mt-6 block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-all ${
+                    plan.highlight
+                      ? "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400"
+                      : "border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 disabled:bg-gray-100"
+                  }`}
+                >
+                  {loading === plan.amount ? "正在创建订单…" : plan.button}
+                </button>
+              )}
             </div>
           ))}
         </div>

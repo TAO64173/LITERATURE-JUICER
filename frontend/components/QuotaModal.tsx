@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { showToast } from "@/components/Toast";
+import { createOrder } from "@/lib/api";
 
 interface QuotaModalProps {
   open: boolean;
@@ -8,7 +10,25 @@ interface QuotaModalProps {
 }
 
 export function QuotaModal({ open, onClose }: QuotaModalProps) {
+  const [loading, setLoading] = useState<number | null>(null);
+
   if (!open) return null;
+
+  const handleBuy = async (amount: number) => {
+    setLoading(amount);
+    try {
+      const data = await createOrder(amount);
+      if (data.success && data.payUrl) {
+        window.location.href = data.payUrl;
+      } else {
+        showToast(data.message || "创建订单失败", "error");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "网络错误，请稍后重试", "error");
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -50,18 +70,22 @@ export function QuotaModal({ open, onClose }: QuotaModalProps) {
 
         <div className="mt-6 space-y-3">
           <button
-            onClick={() => showToast("支付功能即将上线", "success")}
-            className="flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 text-left transition-all hover:border-blue-200 hover:bg-blue-50/50"
+            onClick={() => handleBuy(8.8)}
+            disabled={loading !== null}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 text-left transition-all hover:border-blue-200 hover:bg-blue-50/50 disabled:opacity-60"
           >
             <div>
               <p className="text-sm font-bold text-gray-900">基础包</p>
               <p className="text-xs text-gray-400">10 篇解析额度</p>
             </div>
-            <span className="text-lg font-extrabold text-gray-900">¥8.8</span>
+            <span className="text-lg font-extrabold text-gray-900">
+              {loading === 8.8 ? "处理中…" : "¥8.8"}
+            </span>
           </button>
           <button
-            onClick={() => showToast("支付功能即将上线", "success")}
-            className="flex w-full items-center justify-between rounded-xl border border-blue-200 bg-blue-50/50 px-5 py-4 text-left ring-1 ring-blue-200 transition-all hover:bg-blue-50"
+            onClick={() => handleBuy(15)}
+            disabled={loading !== null}
+            className="flex w-full items-center justify-between rounded-xl border border-blue-200 bg-blue-50/50 px-5 py-4 text-left ring-1 ring-blue-200 transition-all hover:bg-blue-50 disabled:opacity-60"
           >
             <div>
               <div className="flex items-center gap-2">
@@ -72,7 +96,9 @@ export function QuotaModal({ open, onClose }: QuotaModalProps) {
               </div>
               <p className="text-xs text-gray-400">20 篇解析额度</p>
             </div>
-            <span className="text-lg font-extrabold text-gray-900">¥15</span>
+            <span className="text-lg font-extrabold text-gray-900">
+              {loading === 15 ? "处理中…" : "¥15"}
+            </span>
           </button>
         </div>
       </div>

@@ -28,8 +28,9 @@ _PAY_API = os.environ.get("PAY_API", "https://mzf.mapay.cc/xpay/epay/mapi.php")
 _PAY_NOTIFY_URL = os.environ.get("PAY_NOTIFY_URL", "")
 _PAY_RETURN_URL = os.environ.get("PAY_RETURN_URL", "")
 
-logger.info("[payment] Config loaded: PID=%s KEY=%s API=%s NOTIFY=%s RETURN=%s",
-            _PAY_PID, "***" if _PAY_KEY else "(empty)", _PAY_API, _PAY_NOTIFY_URL, _PAY_RETURN_URL)
+logger.info("[payment] Config loaded: PID=%s KEY_LEN=%d KEY_HEAD=%s KEY_TAIL=%s API=%s",
+            _PAY_PID, len(_PAY_KEY), _PAY_KEY[:3] if _PAY_KEY else "",
+            _PAY_KEY[-3:] if _PAY_KEY else "", _PAY_API)
 
 # Amount (yuan) → credits mapping
 _AMOUNT_CREDITS = {
@@ -39,12 +40,12 @@ _AMOUNT_CREDITS = {
 
 
 def _sign_params(params: dict[str, str]) -> str:
-    """MD5 sign for Mapay EPay: sort params, join with &, append &key."""
+    """MD5 sign for Mapay EPay: sort params, join with &, append &key, uppercase."""
     filtered = {k: v for k, v in params.items() if v and k not in ("sign", "sign_type")}
     query = "&".join(f"{k}={v}" for k, v in sorted(filtered.items()))
     raw = f"{query}&key={_PAY_KEY}"
     logger.info("[payment] Sign raw: %s", raw)
-    sign = hashlib.md5(raw.encode("utf-8")).hexdigest()
+    sign = hashlib.md5(raw.encode("utf-8")).hexdigest().upper()
     logger.info("[payment] Sign result: %s", sign)
     return sign
 
@@ -135,10 +136,7 @@ async def payment_notify(request: Request):
         logger.info("[payment] Order already processed: %s status=%s", order_id, order["status"])
         return PlainTextResponse("success")
 
-    # 4. Update order status
-    update_order_status(order_id, "paid", trade_no)
-
-    # 5. Add credits via Supabase RPC
+    # 4. Add credits FIRST (if this fails, order stays pending, Mapay will retry)
     try:
         from backend.supabase_client import get_supabase
 
@@ -148,10 +146,20 @@ async def payment_notify(request: Request):
                 "p_user_id": order["user_id"],
                 "p_amount": order["credits"],
             }).execute()
+            if result.data is None or result.data < 0:
+                logger.error("[payment] add_quota returned invalid: %s", result.data)
+                return PlainTextResponse("fail")
             logger.info("[payment] Credits added: order=%s credits=%d remaining=%s",
                         order_id, order["credits"], result.data)
+        else:
+            logger.error("[payment] Supabase unavailable, cannot add credits")
+            return PlainTextResponse("fail")
     except Exception as e:
         logger.error("[payment] Failed to add credits: %s", e, exc_info=True)
+        return PlainTextResponse("fail")
+
+    # 5. Update order status AFTER credits added successfully
+    update_order_status(order_id, "paid", trade_no)
 
     return PlainTextResponse("success")
 

@@ -86,7 +86,7 @@ def create_payment_order(
         "out_trade_no": order_id,
         "notify_url": _PAY_NOTIFY_URL,
         "return_url": _PAY_RETURN_URL,
-        "name": f"文献解析额度 x{credits}",
+        "name": f"LiteratureJuicer-x{credits}",
         "money": money,
         "type": "alipay",
     }

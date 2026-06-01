@@ -40,12 +40,12 @@ _AMOUNT_CREDITS = {
 
 
 def _sign_params(params: dict[str, str]) -> str:
-    """MD5 sign for Mapay EPay: sort params, join with &, append &key, uppercase."""
+    """MD5 sign per Mapay EPay doc: sort params, join with &, append KEY directly, lowercase md5."""
     filtered = {k: v for k, v in params.items() if v and k not in ("sign", "sign_type")}
     query = "&".join(f"{k}={v}" for k, v in sorted(filtered.items()))
-    raw = f"{query}&key={_PAY_KEY}"
+    raw = query + _PAY_KEY  # 直接拼接 KEY，不加 &key=
     logger.info("[payment] Sign raw: %s", raw)
-    sign = hashlib.md5(raw.encode("utf-8")).hexdigest().upper()
+    sign = hashlib.md5(raw.encode("utf-8")).hexdigest()  # 小写
     logger.info("[payment] Sign result: %s", sign)
     return sign
 

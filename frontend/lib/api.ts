@@ -41,14 +41,14 @@ export interface UploadResponse {
 }
 
 export async function fetchQuota(): Promise<QuotaInfo> {
-  console.log("[api] fetchQuota: calling GET /api/quota");
   const res = await fetch("/api/quota", { method: "GET" });
-  console.log("[api] fetchQuota: status", res.status);
   if (!res.ok) {
     throw new Error("获取额度失败");
   }
   const data = await res.json();
-  console.log("[api] fetchQuota: result", data);
+  if (!data.success) {
+    throw new Error(data.message || "获取额度失败");
+  }
   return data;
 }
 

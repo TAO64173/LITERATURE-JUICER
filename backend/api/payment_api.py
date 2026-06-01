@@ -28,6 +28,9 @@ _PAY_API = os.environ.get("PAY_API", "https://mzf.mapay.cc/xpay/epay/mapi.php")
 _PAY_NOTIFY_URL = os.environ.get("PAY_NOTIFY_URL", "")
 _PAY_RETURN_URL = os.environ.get("PAY_RETURN_URL", "")
 
+logger.info("[payment] Config loaded: PID=%s KEY=%s API=%s NOTIFY=%s RETURN=%s",
+            _PAY_PID, "***" if _PAY_KEY else "(empty)", _PAY_API, _PAY_NOTIFY_URL, _PAY_RETURN_URL)
+
 # Amount (yuan) → credits mapping
 _AMOUNT_CREDITS = {
     8.8: 10,
@@ -40,7 +43,10 @@ def _sign_params(params: dict[str, str]) -> str:
     filtered = {k: v for k, v in params.items() if v and k not in ("sign", "sign_type")}
     query = "&".join(f"{k}={v}" for k, v in sorted(filtered.items()))
     raw = f"{query}&key={_PAY_KEY}"
-    return hashlib.md5(raw.encode("utf-8")).hexdigest()
+    logger.info("[payment] Sign raw: %s", raw)
+    sign = hashlib.md5(raw.encode("utf-8")).hexdigest()
+    logger.info("[payment] Sign result: %s", sign)
+    return sign
 
 
 # ── Create Order ──────────────────────────────────────────────────
@@ -54,6 +60,10 @@ def create_payment_order(
     req: CreateOrderRequest,
     token_payload: dict = Depends(verify_clerk_token),
 ):
+    if not _PAY_PID or not _PAY_KEY:
+        logger.error("[payment] PAY_PID or PAY_KEY not configured!")
+        return {"success": False, "message": "支付未配置，请联系管理员"}
+
     clerk_user_id = token_payload.get("sub", "")
     credits = _AMOUNT_CREDITS.get(req.amount)
     if not credits:
@@ -70,13 +80,14 @@ def create_payment_order(
         return {"success": False, "message": "创建订单失败，请稍后重试"}
 
     # Build signed payment URL
+    money = f"{req.amount:.2f}"  # Ensure 2 decimal places: 8.8 → "8.80"
     params = {
         "pid": _PAY_PID,
         "out_trade_no": order_id,
         "notify_url": _PAY_NOTIFY_URL,
         "return_url": _PAY_RETURN_URL,
         "name": f"文献解析额度 x{credits}",
-        "money": str(req.amount),
+        "money": money,
         "type": "alipay",
     }
     params["sign"] = _sign_params(params)
@@ -84,6 +95,7 @@ def create_payment_order(
 
     qs = "&".join(f"{k}={v}" for k, v in params.items())
     pay_url = f"{_PAY_API}?{qs}"
+    logger.info("[payment] Pay URL: %s", pay_url)
 
     logger.info("[payment] Order created: %s amount=%.1f credits=%d", order_id, req.amount, credits)
     return {"success": True, "payUrl": pay_url, "orderId": order_id}

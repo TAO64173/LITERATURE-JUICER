@@ -24,7 +24,7 @@ router = APIRouter()
 
 _PAY_PID = os.environ.get("PAY_PID", "")
 _PAY_KEY = os.environ.get("PAY_KEY", "")
-_PAY_API = os.environ.get("PAY_API", "https://mzf.mapay.cc/xpay/epay/mapi.php")
+_PAY_API = os.environ.get("PAY_API", "https://mzf.mapay.cc/xpay/epay/submit.php")
 _PAY_NOTIFY_URL = os.environ.get("PAY_NOTIFY_URL", "")
 _PAY_RETURN_URL = os.environ.get("PAY_RETURN_URL", "")
 

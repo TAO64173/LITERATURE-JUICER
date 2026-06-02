@@ -83,10 +83,10 @@ def create_payment_order(
     # Build signed payment URL
     money = f"{req.amount:.2f}"  # Ensure 2 decimal places: 8.8 → "8.80"
     params = {
-        "pid": _PAY_PID,
+        "pid": _PAY_PID.strip(),
         "out_trade_no": order_id,
-        "notify_url": _PAY_NOTIFY_URL,
-        "return_url": _PAY_RETURN_URL,
+        "notify_url": _PAY_NOTIFY_URL.strip(),
+        "return_url": _PAY_RETURN_URL.strip(),
         "name": f"LiteratureJuicer-x{credits}",
         "money": money,
         "type": "alipay",
